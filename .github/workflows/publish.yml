@@ -9,6 +9,8 @@ on:
       - .devcontainer
       - .gitignore
       - .idea
+      - docker-compose.production.yml
+      - Dockerfile.production
 
 jobs:
   build_exe:
