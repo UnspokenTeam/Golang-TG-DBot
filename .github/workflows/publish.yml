@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - .github
+      - .devcontainer
+      - .gitignore
+      - .idea
 
 jobs:
   build_exe:
@@ -26,8 +31,8 @@ jobs:
       - name: Upload artifact to tmp
         uses: actions/upload-artifact@v4
         with:
-          name: 'Bot.exe'
-          path: './Bot.exe'
+          name: 'Bot'
+          path: './Bot'
 
   release:
     runs-on: ubuntu-latest
@@ -36,7 +41,7 @@ jobs:
       - name: Download artifact from tmp
         uses: actions/download-artifact@v4
         with:
-          name: 'Bot.exe'
+          name: 'Bot'
           path: '.'
 
       - name: Create release
