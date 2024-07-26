@@ -1,0 +1,60 @@
+name: Publish
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build_exe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Go setup
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.22
+
+      - name: Get packages
+        run: go mod install
+
+      - name: Build .exe
+        run: go build -o Bot.exe golang-tg-bot
+
+      - name: Upload artifact to tmp
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'Bot.exe'
+          path: './Bot.exe'
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build_exe
+    steps:
+      - name: Download artifact from tmp
+        uses: actions/download-artifact@v4
+        with:
+          name: 'Bot.exe'
+          path: '.'
+
+      - name: Create release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.event.head_commit.message }}
+          release_name: Release ${{ github.event.head_commit.message }}
+          draft: false
+          prerelease: false
+
+      - name: Upload exe
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Bot.exe
+          asset_name: ${{github.event.head_commit.message}}.exe
+          asset_content_type: application/exe
