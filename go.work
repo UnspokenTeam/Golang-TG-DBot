@@ -1,0 +1,9 @@
+go 1.22.5
+
+use (
+	./pkg/postgres
+	./pkg/logger
+	./pkg/env_loader
+	./pkg/rate_limiter
+	.
+)
