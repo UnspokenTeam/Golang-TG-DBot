@@ -2,9 +2,9 @@ package env_loader
 
 import (
 	"fmt"
-	"git
+	"github.com/joho/godotenv"
 	"os"
-/joho/godo
+	"path/filepath"
 	"reflect"
 	"strconv"
 )
