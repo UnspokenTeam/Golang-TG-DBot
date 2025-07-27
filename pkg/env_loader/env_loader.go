@@ -2,10 +2,22 @@ package env_loader
 
 import (
 	"fmt"
+	"git
 	"os"
+/joho/godo
 	"reflect"
 	"strconv"
 )
+
+func init() {
+	envPath := filepath.Join("..", "..", ".env")
+	if _, err := os.Stat(envPath); err == nil {
+		err = godotenv.Load(envPath)
+		if err != nil {
+			panic(fmt.Sprintf("Ошибка при загрузке .env файла: %v", err))
+		}
+	}
+}
 
 func getEnvOrPanic(typeName string, fieldName string) string {
 	envVarName := fmt.Sprintf("%s__%s", typeName, fieldName)

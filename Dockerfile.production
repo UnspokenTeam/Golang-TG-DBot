@@ -1,16 +1,30 @@
-FROM golang:1.22.5-alpine3.20 as build
+# --- Build stage ---
+FROM golang:1.22.5-alpine3.20 AS build
 
 WORKDIR /app
 
+# Установка зависимостей
+RUN apk add --no-cache git curl
+
+# Установка goose
+RUN go install github.com/pressly/goose/v3/cmd/goose@latest
+
 COPY . .
+
 RUN go mod download
 RUN go build -o Bot github.com/zixrend/golang-tg-bot/cmd
 
-FROM alpine:3.20 as run
+# --- Final image ---
+FROM alpine:3.20 AS run
 
 WORKDIR /app
 
+RUN apk add --no-cache ca-certificates libc6-compat
+
 COPY --from=build /app/Bot .
+COPY --from=build /go/bin/goose /usr/local/bin/goose
+COPY --from=build /app/sql ./sql
 
 EXPOSE 8000
-ENTRYPOINT ./Bot
+
+ENTRYPOINT sh -c 'goose -dir ./sql postgres "host=$DB_HOST port=$DB_PORT user=$DB_USER dbname=$DB_NAME password=$DB_PASSWORD sslmode=disable" up && ./Bot'
