@@ -2,21 +2,17 @@ package app
 
 import (
 	"fmt"
-	"github/zixrend/env_loader"
+	"github.com/zixrend/env_loader"
+	"github.com/zixrend/golang-tg-bot/pkg/configs"
+	"os"
 )
 
-type Data struct {
-	D1 string
-	D2 string
-}
-
 func Run() {
-	data := Data{}
-	envl := env_loader.Env{}
-	err := envl.LoadData(env_loader.DEVELOPMENT)
-	if err != nil {
-		return
+	env := os.Getenv("GO_ENV")
+	if env == "DEVELOPMENT" {
+		fmt.Println("DEVELOPMENT")
 	}
-	fmt.Println(fmt.Sprintf("%s %s", data.D1, data.D2))
+	config := env_loader.GetFromEnv[configs.RedisConfig]()
+	fmt.Println(fmt.Sprintf("%s %s", config.Host, config.Port))
 	fmt.Println("Bot started on port 8080")
 }
