@@ -1,71 +1,70 @@
 package env_loader
 
 import (
-	"errors"
 	"fmt"
+	"os"
 	"reflect"
+	"strconv"
 )
 
-type Environment string
-
-const (
-	PRODUCTION  Environment = "production"
-	DEVELOPMENT             = "development"
-)
-
-type Env struct {
-	data map[string]string
+func getEnvOrPanic(typeName string, fieldName string) string {
+	envVarName := fmt.Sprintf("%s__%s", typeName, fieldName)
+	envVal, ok := os.LookupEnv(envVarName)
+	if !ok {
+		panic(fmt.Sprintf("Can't map env to struct %s, because %s key for field %s does not exist", typeName, envVarName, fieldName))
+	}
+	return envVal
 }
 
-func (e *Env) LoadData(environment Environment) error {
-	filename := fmt.Sprintf(".env.%s", environment)
-
-	handler := FileHandler{}
-
-	if err := Open(filename, &handler); err != nil {
-		return err
-	}
-
-	defer handler.Close()
-
-	var err error
-	err, e.data = handler.Read()
-
-	return err
-}
-
-func (e *Env) GetValue(data interface{}) error {
-
-	dataType := reflect.TypeOf(data)
-
-	if dataType.Kind() != reflect.Pointer {
-		return errors.New("data should be a pointer type")
-	}
-
-	dataType = dataType.Elem()
-
-	switch dataType.Kind() {
-	case reflect.Struct:
-		_ = e.unmarshalStruct(dataType, data)
-		break
+func setValueToStruct(val *reflect.Value, stringVal string) {
+	switch val.Type().Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		intVal, err := strconv.Atoi(stringVal)
+		if err != nil {
+			panic(fmt.Sprintf("Can't convert string to int value"))
+		}
+		val.SetInt(int64(intVal))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		intVal, err := strconv.ParseUint(stringVal, 10, 64)
+		if err != nil {
+			panic(fmt.Sprintf("Can't convert string to uint value"))
+		}
+		val.SetUint(intVal)
+	case reflect.String:
+		val.SetString(stringVal)
+	case reflect.Bool:
+		boolVal, err := strconv.ParseBool(stringVal)
+		if err != nil {
+			panic(fmt.Sprintf("Can't convert string to bool value"))
+		}
+		val.SetBool(boolVal)
+	case reflect.Float32, reflect.Float64:
+		floatVal, err := strconv.ParseFloat(stringVal, 64)
+		if err != nil {
+			panic(fmt.Sprintf("Can't convert string to float value"))
+		}
+		val.SetFloat(floatVal)
 	default:
-		break
+		panic(fmt.Sprintf("Unsupported type %s", val.Type().Name()))
 	}
-
-	return nil
 }
 
-func (e *Env) unmarshalStruct(t reflect.Type, data interface{}) error {
-	val := reflect.ValueOf(data)
-	fieldCount := t.NumField()
-	for i := range fieldCount {
-		field := t.Field(i)
-		fmt.Println(field.Name)
-		val.Elem().FieldByName(field.Name).SetString("qwe")
+func GetFromEnv[T any]() *T {
+	obj := new(T)
+	objValue := reflect.ValueOf(obj).Elem()
+	objType := objValue.Type()
+	typeName := objType.Name()
+	for idx := 0; idx < objValue.NumField(); idx++ {
+		typeField := objType.Field(idx)
+		fieldName, ok := typeField.Tag.Lookup("env")
+		if !ok {
+			panic(fmt.Sprintf("Can't map env to struct, because field %s in %s struct does not have env tag attached to it", typeField.Name, typeName))
+		}
+
+		stringVal := getEnvOrPanic(typeName, fieldName)
+		field := objValue.Field(idx)
+		setValueToStruct(&field, stringVal)
 	}
-	return nil
-}
 
-func (e *Env) getFieldValue(data interface{}) {
-
+	return obj
 }
