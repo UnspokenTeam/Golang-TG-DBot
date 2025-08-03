@@ -1,82 +1,63 @@
 package env_loader
 
 import (
-	"fmt"
-	"github.com/joho/godotenv"
-	"os"
-	"path/filepath"
+	envloader "env_loader/utils"
+	"errors"
 	"reflect"
-	"strconv"
 )
 
-func init() {
-	envPath := filepath.Join("..", "..", ".env")
-	if _, err := os.Stat(envPath); err == nil {
-		err = godotenv.Load(envPath)
-		if err != nil {
-			panic(fmt.Sprintf("Ошибка при загрузке .env файла: %v", err))
-		}
-	}
+type EnvLoader struct {
+	env *envloader.Env
 }
 
-func getEnvOrPanic(typeName string, fieldName string) string {
-	envVarName := fmt.Sprintf("%s__%s", typeName, fieldName)
-	envVal, ok := os.LookupEnv(envVarName)
-	if !ok {
-		panic(fmt.Sprintf("Can't map env to struct %s, because %s key for field %s does not exist", typeName, envVarName, fieldName))
+func (loader *EnvLoader) LoadDataIntoStruct(v interface{}) error {
+	value := reflect.ValueOf(v)
+	if value.Kind() != reflect.Pointer {
+		return errors.New("value should be a pointer")
 	}
-	return envVal
+
+	if value.Elem().Kind() != reflect.Struct {
+		return errors.New("value under pointer should be a struct")
+	}
+
+	return loader.loadDataIntoValue(value)
 }
 
-func setValueToStruct(val *reflect.Value, stringVal string) {
-	switch val.Type().Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		intVal, err := strconv.Atoi(stringVal)
-		if err != nil {
-			panic(fmt.Sprintf("Can't convert string to int value"))
+func (loader *EnvLoader) loadDataIntoValue(v reflect.Value) error {
+	vType := v.Type().Elem()
+	v = v.Elem()
+
+	for fieldIdx := range v.NumField() {
+		fieldValue := v.Field(fieldIdx)
+		fieldType := vType.Field(fieldIdx)
+
+		envKey, tagParseError := envloader.ParseTag(vType, fieldType)
+		if tagParseError != nil {
+			return tagParseError
 		}
-		val.SetInt(int64(intVal))
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		intVal, err := strconv.ParseUint(stringVal, 10, 64)
-		if err != nil {
-			panic(fmt.Sprintf("Can't convert string to uint value"))
+
+		if envKey == nil {
+			continue
 		}
-		val.SetUint(intVal)
-	case reflect.String:
-		val.SetString(stringVal)
-	case reflect.Bool:
-		boolVal, err := strconv.ParseBool(stringVal)
-		if err != nil {
-			panic(fmt.Sprintf("Can't convert string to bool value"))
+
+		if err := loader.env.GetIntoReflectValue(fieldValue.Addr(), *envKey); err != nil {
+			return err
 		}
-		val.SetBool(boolVal)
-	case reflect.Float32, reflect.Float64:
-		floatVal, err := strconv.ParseFloat(stringVal, 64)
-		if err != nil {
-			panic(fmt.Sprintf("Can't convert string to float value"))
-		}
-		val.SetFloat(floatVal)
-	default:
-		panic(fmt.Sprintf("Unsupported type %s", val.Type().Name()))
 	}
+
+	return nil
 }
 
-func GetFromEnv[T any]() *T {
-	obj := new(T)
-	objValue := reflect.ValueOf(obj).Elem()
-	objType := objValue.Type()
-	typeName := objType.Name()
-	for idx := 0; idx < objValue.NumField(); idx++ {
-		typeField := objType.Field(idx)
-		fieldName, ok := typeField.Tag.Lookup("env")
-		if !ok {
-			panic(fmt.Sprintf("Can't map env to struct, because field %s in %s struct does not have env tag attached to it", typeField.Name, typeName))
-		}
-
-		stringVal := getEnvOrPanic(typeName, fieldName)
-		field := objValue.Field(idx)
-		setValueToStruct(&field, stringVal)
+func CreateLoaderFromFile(filePath string) (*EnvLoader, error) {
+	env, err := envloader.CreateEnvFromFile(filePath)
+	if err != nil {
+		return nil, err
 	}
 
-	return obj
+	return &EnvLoader{env: env}, nil
+}
+
+func CreateLoaderFromEnv() *EnvLoader {
+	env := envloader.CreateEnvFromEnvironment()
+	return &EnvLoader{env: env}
 }

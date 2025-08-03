@@ -7,13 +7,13 @@ services:
   app-dev:
     build:
       context: .
-      dockerfile: Dockerfile.production
+      dockerfile: Dockerfile
     environment:
       GO_ENV: "DEVELOPMENT"
     env_file:
       - .env
     ports:
-      - "8000:8000"
+      - "8001:8000"
     networks:
       - app-network
     depends_on:
@@ -26,14 +26,14 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2500M
+          memory: 500M
         reservations:
-          memory: 1000M
+          memory: 250M
 
   app-prod:
     build:
       context: .
-      dockerfile: Dockerfile.production
+      dockerfile: Dockerfile
     env_file:
       - .env
     environment:
