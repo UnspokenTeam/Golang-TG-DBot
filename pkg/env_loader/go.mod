@@ -1,3 +1,3 @@
-module github/zixrend/env_loader
+module env_loader
 
-go 1.22.5
+go 1.24.5
