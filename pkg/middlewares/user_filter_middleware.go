@@ -138,8 +138,15 @@ func UserFilterMiddleware(ctx *th.Context, upd telego.Update) error {
 		msg.Text[0] != '/' || !filterRequest(ctx.Context(), ctx.Bot(), msg) {
 		return nil
 	}
-	for len(MessageQueue) >= cap(MessageQueue) {
-		time.Sleep(time.Second)
+	for {
+		select {
+		case <-ctx.Context().Done():
+			return ctx.Context().Err()
+		default:
+			if len(MessageQueue) < cap(MessageQueue) {
+				return ctx.Next(upd)
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
-	return ctx.Next(upd)
 }
