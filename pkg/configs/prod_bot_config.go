@@ -2,7 +2,7 @@ package configs
 
 import (
 	"env_loader"
-	"log"
+	"logger"
 )
 
 type ProdBotConfig struct {
@@ -15,9 +15,8 @@ type ProdBotConfig struct {
 func GetProdConfig() *ProdBotConfig {
 	envLoader := env_loader.CreateLoaderFromEnv()
 	prodConfig := &ProdBotConfig{}
-	err := envLoader.LoadDataIntoStruct(prodConfig)
-	if err != nil {
-		log.Fatal(err)
+	if err := envLoader.LoadDataIntoStruct(prodConfig); err != nil {
+		logger.LogFatal(err.Error(), "configuring", nil)
 	}
 	return prodConfig
 }

@@ -2,7 +2,7 @@ package configs
 
 import (
 	"env_loader"
-	"log"
+	"logger"
 )
 
 type BotCommandsConfig struct {
@@ -13,8 +13,9 @@ var BotCommands BotCommandsConfig
 
 func LoadBotCommands() {
 	envLoader := env_loader.CreateLoaderFromEnv()
-	err := envLoader.LoadDataIntoStruct(&BotCommands)
-	if err != nil {
-		log.Fatal(err)
+	if err := envLoader.LoadDataIntoStruct(&BotCommands); err != nil {
+		logger.LogFatal(err.Error(), "configuring", nil)
 	}
 }
+
+func ReloadCommandConfigs() {}

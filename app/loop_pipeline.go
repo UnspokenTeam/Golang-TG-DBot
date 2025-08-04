@@ -2,25 +2,43 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"github.com/mymmrac/telego"
+	"golang.org/x/time/rate"
+	"logger"
+	"os"
+	"sync"
 	"time"
 )
 
-var cancelFunc context.CancelFunc
+var (
+	cancelFunc     context.CancelFunc
+	restartMu      sync.Mutex
+	restartLimiter *rate.Limiter
+	env            string
+)
+
+func InitAppLooper(goEnv string) {
+	env = goEnv
+	restartLimiter = rate.NewLimiter(rate.Every(time.Minute*10), 1)
+}
 
 func LoopApp() {
-	if cancelFunc != nil {
-		cancelFunc()
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	cancelFunc = cancel
 
-	Run(ctx)
+	Done = make(chan struct{}, 1)
+	Run(env, ctx)
 }
 
 func RestartApp() {
-	LoopApp()
+	restartMu.Lock()
+	defer restartMu.Unlock()
+	if cancelFunc != nil {
+		cancelFunc()
+		<-Done
+	}
+	go LoopApp()
 }
 
 func HealthCheckWithRestart(bot *telego.Bot, ctx context.Context) {
@@ -30,4 +48,14 @@ func HealthCheckWithRestart(bot *telego.Bot, ctx context.Context) {
 			RestartApp()
 		}
 	}
+}
+
+func RestartAfterPanic() {
+	if err := restartLimiter.Wait(context.Background()); err != nil {
+		logger.LogError(fmt.Sprintf("Restart rate limiter error: %s", err), "workerRateLimitError", nil)
+		cancelFunc()
+		<-Done
+		os.Exit(1)
+	}
+	RestartApp()
 }
