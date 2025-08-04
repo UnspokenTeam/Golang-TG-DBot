@@ -58,7 +58,7 @@ func tryMuteSpammer(bot *telego.Bot, message *telego.Message) {
 	case *telego.ChatMemberOwner:
 		allowed = true
 	case *telego.ChatMemberAdministrator:
-		allowed = allowed || m.CanRestrictMembers
+		allowed = m.CanRestrictMembers
 	}
 
 	memberToMute, memberGetErr := bot.GetChatMember(Ctx, &telego.GetChatMemberParams{

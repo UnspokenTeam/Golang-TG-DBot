@@ -85,7 +85,7 @@ func Run(env string, innerCtx context.Context) {
 		jsonifyStack = true
 
 	default:
-		logger.LogFatal(fmt.Sprintf("Неизвестная среда GO_ENV=%q", env), "configuring", nil)
+		logger.LogFatal(fmt.Sprintf("Unknown env GO_ENV=%q", env), "configuring", nil)
 	}
 
 	logger.InitLogger(bot.Token(), bot.SecretToken(), jsonifyStack)
