@@ -3,6 +3,7 @@ package env_loader
 import (
 	"errors"
 	"fmt"
+	"logger"
 	"os"
 	"reflect"
 	"regexp"
@@ -39,7 +40,7 @@ type Env struct {
 
 func (env *Env) GetIntoReflectValue(value reflect.Value, key string) error {
 	if value.Kind() != reflect.Pointer {
-		panic(errors.New("value should be of pointer type"))
+		logger.LogFatal("value should be of pointer type", "envLoading", nil)
 	}
 
 	value = value.Elem()

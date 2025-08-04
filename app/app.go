@@ -9,7 +9,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/valyala/fasthttp"
-	"log"
+	"logger"
 	"middlewares"
 	"os"
 	"os/signal"
@@ -20,9 +20,18 @@ var (
 	bot       *telego.Bot
 	updatesCh <-chan telego.Update
 	err       error
+	Done      chan struct{}
+	ctx       context.Context
+	cancel    context.CancelFunc
 )
 
-func initBotInstance(ctx context.Context, token string) *telego.Bot {
+func initBotInstance(ctx context.Context, token string, isDev bool) *telego.Bot {
+	var loggerOpt telego.BotOption
+	if isDev {
+		loggerOpt = telego.WithDefaultDebugLogger()
+	} else {
+		loggerOpt = telego.WithLogger(logger.TelegoLogger{})
+	}
 	bot, err = telego.NewBot(
 		token,
 		telego.WithAPICaller(
@@ -34,32 +43,29 @@ func initBotInstance(ctx context.Context, token string) *telego.Bot {
 				MaxDelay:     time.Second,
 			}),
 		telego.WithHealthCheck(ctx),
-		telego.WithDefaultDebugLogger(),
+		loggerOpt,
 	)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logger.LogFatal(err.Error(), "configuring", nil)
 	}
 	return bot
 }
 
-func Run(innerCtx context.Context) {
-	env := os.Getenv("GO_ENV")
-
-	ctx, cancel := signal.NotifyContext(innerCtx, os.Interrupt)
+func Run(env string, innerCtx context.Context) {
+	ctx, cancel = signal.NotifyContext(innerCtx, os.Interrupt)
 	defer cancel()
+	jsonifyStack := false
 
-	done := make(chan struct{}, 1)
 	srv := &fasthttp.Server{}
 
 	switch env {
 	case "DEVELOPMENT":
-		initBotInstance(ctx, os.Getenv("DEV_TOKEN"))
+		initBotInstance(ctx, os.Getenv("DEV_TOKEN"), true)
 		updatesCh, _ = bot.UpdatesViaLongPolling(ctx, nil)
 
 	case "PRODUCTION":
 		prodConfig := configs.GetProdConfig()
-		initBotInstance(ctx, prodConfig.ProdToken)
+		initBotInstance(ctx, prodConfig.ProdToken, false)
 
 		_ = bot.SetWebhook(ctx, &telego.SetWebhookParams{
 			URL:         fmt.Sprintf("https://%s/%s", prodConfig.CaddyDomain, bot.Token()),
@@ -67,7 +73,7 @@ func Run(innerCtx context.Context) {
 		})
 
 		info, _ := bot.GetWebhookInfo(ctx)
-		fmt.Printf("Webhook Info: %+v\n", info)
+		logger.LogInfo(fmt.Sprintf("Webhook Info: %+v\n", info), "webhookSetup", nil)
 
 		updatesCh, _ = bot.UpdatesViaWebhook(
 			ctx,
@@ -76,14 +82,16 @@ func Run(innerCtx context.Context) {
 		)
 
 		go func() { _ = srv.ListenAndServe(fmt.Sprintf(":%d", prodConfig.AppPort)) }()
+		jsonifyStack = true
 
 	default:
-		log.Fatalf("Неизвестная среда GO_ENV=%q", env)
+		logger.LogFatal(fmt.Sprintf("Неизвестная среда GO_ENV=%q", env), "configuring", nil)
 	}
 
+	logger.InitLogger(bot.Token(), bot.SecretToken(), jsonifyStack)
 	configs.LoadBotCommands()
 	middlewares.InitQueue(ctx, bot)
-	log.Println("Bot started, waiting for updates...")
+	defer middlewares.ShutdownQueue()
 
 	handler, _ := th.NewBotHandler(bot, updatesCh)
 	handler.Use(middlewares.UserFilterMiddleware)
@@ -100,14 +108,14 @@ func Run(innerCtx context.Context) {
 
 	go func() {
 		<-ctx.Done()
-		fmt.Println("Stopping...")
+		logger.LogInfo("Stopping...", "gracefulShutdown", nil)
 
 		stopCtx, stopCancel := context.WithTimeout(context.Background(), time.Second*30)
 		defer stopCancel()
 
 		if env == "PRODUCTION" {
 			_ = srv.ShutdownWithContext(stopCtx)
-			fmt.Println("Server done")
+			logger.LogInfo("Server done...", "gracefulShutdown", nil)
 		}
 
 		for len(updatesCh) > 0 || len(middlewares.MessageQueue) > 0 {
@@ -118,18 +126,19 @@ func Run(innerCtx context.Context) {
 				// Continue
 			}
 		}
-		fmt.Println("Webhook done")
+		logger.LogInfo("Webhook done...", "gracefulShutdown", nil)
 
 		_ = handler.StopWithContext(stopCtx)
-		fmt.Println("Bot handler done")
+		logger.LogInfo("Bot handler done...", "gracefulShutdown", nil)
 
-		done <- struct{}{}
+		Done <- struct{}{}
 	}()
 
 	go func() { _ = handler.Start() }()
+	logger.LogInfo("Bot started", "configuring", nil)
 
 	go HealthCheckWithRestart(bot, innerCtx)
 
-	<-done
-	fmt.Println("Done")
+	<-Done
+	logger.LogInfo("Stopping done", "gracefulShutdown", nil)
 }

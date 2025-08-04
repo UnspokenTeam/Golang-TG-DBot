@@ -4,7 +4,7 @@ import (
 	"env_loader"
 	"fmt"
 	"github.com/redis/go-redis/v9"
-	"log"
+	"logger"
 )
 
 type FilterMiddlewareConfig struct {
@@ -22,9 +22,8 @@ var (
 
 func InitMiddlewareConfig() {
 	envLoader := env_loader.CreateLoaderFromEnv()
-	err := envLoader.LoadDataIntoStruct(&MiddlewareConfig)
-	if err != nil {
-		log.Fatal(err)
+	if err := envLoader.LoadDataIntoStruct(&MiddlewareConfig); err != nil {
+		logger.LogFatal(err.Error(), "configuring", nil)
 	}
 	Rdb = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", MiddlewareConfig.RedisHost, MiddlewareConfig.RedisPort),
