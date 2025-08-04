@@ -1,0 +1,192 @@
+version: '3.9'
+
+volumes:
+  postgres-data:
+
+services:
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      GO_ENV: "DEVELOPMENT"
+    env_file:
+      - .env
+    ports:
+      - "8001:8000"
+    networks:
+      - app-network
+    depends_on:
+      - db
+      - redis
+      - loki
+      - promtail
+      - grafana
+    profiles: ["dev"]
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 250M
+
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      GO_ENV: "PRODUCTION"
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    depends_on:
+      - db
+      - redis
+      - loki
+      - promtail
+      - grafana
+    profiles: ["prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 2500M
+        reservations:
+          memory: 1000M
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    env_file:
+      - .env
+    networks:
+      - app-network
+    profiles: ["dev", "prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 2500M
+        reservations:
+          memory: 1000M
+
+  redis:
+    image: redis:7.0-alpine
+    restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server
+      --requirepass "${REDIS_PASSWORD}"
+      --maxmemory 500mb
+      --maxmemory-policy volatile-ttl
+    networks:
+      - app-network
+    profiles: ["dev", "prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 200M
+
+  loki:
+    image: grafana/loki:2.9.2
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - app-network
+    profiles: ["dev", "prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 200M
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    volumes:
+      - /var/log:/var/log
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - app-network
+    profiles: ["dev", "prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+        reservations:
+          memory: 100M
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    networks:
+      - app-network
+    environment:
+      - GF_PATHS_PROVISIONING=/etc/grafana/provisioning
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_LOG_LEVEL="error"
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+    entrypoint:
+      - sh
+      - -euc
+      - |
+        mkdir -p /etc/grafana/provisioning/datasources
+        cat <<EOF > /etc/grafana/provisioning/datasources/ds.yaml
+        apiVersion: 1
+        datasources:
+        - name: Loki
+          type: loki
+          access: proxy
+          orgId: 1
+          url: http://loki:3100
+          basicAuth: false
+          isDefault: true
+          version: 1
+          editable: false
+        EOF
+        /run.sh
+    ports:
+      - "3000:3000"
+    profiles: ["dev", "prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 200M
+
+  caddy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - app-network
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy_data:/data
+      - ./caddy_config:/config
+    profiles: ["prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+        reservations:
+          memory: 100M
+
+networks:
+  app-network:
+    driver: bridge

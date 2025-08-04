@@ -1,3 +1,3 @@
-module github/zixrend/psql-controller
+module psql-controller
 
-go 1.22.5
+go 1.24.5
