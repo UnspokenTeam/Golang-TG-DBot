@@ -3,6 +3,7 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
+	ch "github.com/unspokenteam/golang-tg-dbot/app/app_channels"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -86,7 +87,7 @@ func LogFatal(message string, eventType string, eventFields interface{}) {
 	entry := newLogEntry("FATAL", message, eventType, eventFields, true)
 	data, _ := json.MarshalIndent(entry, "", "\t")
 	_, _ = fmt.Fprintln(os.Stderr, string(data))
-	os.Exit(1)
+	ch.StopChannel <- struct{}{}
 }
 
 type TelegoLogger struct{}

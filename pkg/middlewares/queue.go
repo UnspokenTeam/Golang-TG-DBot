@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	MessageQueue = make(chan *telego.SendMessageParams, 1000)
+	MessageQueue chan *telego.SendMessageParams
 	limiter      *rate.Limiter
 	botInstance  *telego.Bot
 	Ctx          context.Context
@@ -25,6 +25,7 @@ var (
 func InitQueue(appCtx context.Context, bot *telego.Bot) {
 	Ctx = appCtx
 	botInstance = bot
+	MessageQueue = make(chan *telego.SendMessageParams, 1000)
 	rps, err := strconv.Atoi(os.Getenv("RPS_LIMIT"))
 	if err != nil {
 		logger.LogFatal(fmt.Sprintf("Failed to init queue. Cannot find RPS_LIMIT. %s", err.Error()), "configuring", nil)
