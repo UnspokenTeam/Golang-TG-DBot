@@ -32,6 +32,13 @@ func InitAppLooper(goEnv string, mainCtx context.Context) chan struct{} {
 func runApp() {
 	newCtx, newCancel := context.WithCancel(mainContext)
 	appContext, cancel = newCtx, newCancel
+	defer func() {
+		fatalErr := recover()
+		if fatalErr != nil {
+			logger.LogError(fmt.Sprintf("panic: %s", fatalErr), "PanicShutdown", nil)
+		}
+		ch.StopChannel <- struct{}{}
+	}()
 	Run(env, newCtx)
 }
 
