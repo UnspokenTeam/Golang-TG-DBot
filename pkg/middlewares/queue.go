@@ -49,7 +49,6 @@ func tryToSendWithRetry(msg *telego.SendMessageParams) bool {
 	).WithText(
 		hndUtils.EscapeMarkdownV2Smart(msg.Text))
 
-	fmt.Println(msg.Text)
 	for i := 0; i < 3; i++ {
 		_, err = BotInstance.SendMessage(Ctx, msg)
 		if err == nil {
