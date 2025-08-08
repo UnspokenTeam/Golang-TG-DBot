@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/mymmrac/telego"
 	"github.com/mymmrac/telego/telegoapi"
+	hndUtils "github.com/unspokenteam/golang-tg-dbot/app/handler_utils"
 	"golang.org/x/time/rate"
 	"logger"
 	"os"
@@ -15,16 +16,17 @@ import (
 )
 
 var (
-	MessageQueue = make(chan *telego.SendMessageParams, 1000)
+	MessageQueue chan *telego.SendMessageParams
 	limiter      *rate.Limiter
-	botInstance  *telego.Bot
+	BotInstance  *telego.Bot
 	Ctx          context.Context
 	wg           sync.WaitGroup
 )
 
 func InitQueue(appCtx context.Context, bot *telego.Bot) {
 	Ctx = appCtx
-	botInstance = bot
+	BotInstance = bot
+	MessageQueue = make(chan *telego.SendMessageParams, 1000)
 	rps, err := strconv.Atoi(os.Getenv("RPS_LIMIT"))
 	if err != nil {
 		logger.LogFatal(fmt.Sprintf("Failed to init queue. Cannot find RPS_LIMIT. %s", err.Error()), "configuring", nil)
@@ -40,8 +42,15 @@ func tryToSendWithRetry(msg *telego.SendMessageParams) bool {
 		apiErr *telegoapi.Error
 	)
 
+	msg = msg.WithLinkPreviewOptions(
+		&telego.LinkPreviewOptions{IsDisabled: true},
+	).WithParseMode(
+		telego.ModeMarkdownV2,
+	).WithText(
+		hndUtils.EscapeMarkdownV2Smart(msg.Text))
+
 	for i := 0; i < 3; i++ {
-		_, err = botInstance.SendMessage(Ctx, msg)
+		_, err = BotInstance.SendMessage(Ctx, msg)
 		if err == nil {
 			return true
 		} else if errors.As(err, &apiErr) && apiErr.ErrorCode == 429 {
