@@ -16,7 +16,7 @@ func handlePanic() {
 	}
 }
 
-func panicHanlderWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wrappedFunc func(*th.Context, telego.Update)) {
+func panicHandlerWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wrappedFunc func(*th.Context, telego.Update)) {
 	defer handlePanic()
 	//hnd.HandleUser(ctxWrapper, updateWrapper)
 	wrappedFunc(ctxWrapper, updateWrapper)
@@ -25,7 +25,7 @@ func panicHanlderWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wr
 func registerHandler(handler *th.BotHandler, command string, handleFunc func(*th.Context, telego.Update)) {
 	handler.Handle(
 		func(thCtx *th.Context, update telego.Update) error {
-			go func() { panicHanlderWrapper(thCtx, update, handleFunc) }()
+			go func() { panicHandlerWrapper(thCtx, update, handleFunc) }()
 			return nil
 		},
 		th.CommandEqual(command),

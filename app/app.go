@@ -22,7 +22,7 @@ var (
 	Done      chan struct{}
 )
 
-func initBotInstance(appCtx context.Context, token string, isDev bool) *telego.Bot {
+func initBotInstance(appCtx context.Context, token string, isDev bool) {
 	var loggerOpt telego.BotOption
 	if isDev {
 		loggerOpt = telego.WithDefaultDebugLogger()
@@ -46,7 +46,6 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) *telego.B
 		logger.LogFatal(err.Error(), "configuring", nil)
 	}
 	handler_utils.InitUtils(bot)
-	return bot
 }
 
 func waitForGracefulShutdown(funcCtx context.Context, server *fasthttp.Server, ch <-chan telego.Update, hnd *th.BotHandler) {

@@ -73,8 +73,6 @@ func LoopApp() {
 			go restartApp()
 		case <-ch.StopChannel:
 			go stopApp()
-		default:
-			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }
