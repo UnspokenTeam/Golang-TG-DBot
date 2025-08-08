@@ -18,6 +18,7 @@ func handlePanic() {
 
 func panicHanlderWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wrappedFunc func(*th.Context, telego.Update)) {
 	defer handlePanic()
+	//hnd.HandleUser(ctxWrapper, updateWrapper)
 	wrappedFunc(ctxWrapper, updateWrapper)
 }
 

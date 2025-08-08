@@ -3,6 +3,7 @@ package handler_utils
 import (
 	"fmt"
 	"github.com/mymmrac/telego"
+	"net/url"
 	"regexp"
 	"strings"
 )
@@ -94,6 +95,23 @@ func GetAddToGroupLink(text string) string {
 	return fmt.Sprintf("[%s](tg://resolve?domain=%s&startgroup=true)", text, utilsBotInstance.Username())
 }
 
+func GetAddToGroupLinkWithoutHeader() string {
+	return fmt.Sprintf("tg://resolve?domain=%s&startgroup=true", utilsBotInstance.Username())
+}
+
+func GetSendInviteLink(text string, inviteText string) string {
+	return fmt.Sprintf(
+		"[%s](tg://msg_url?url=%s&text=%s)",
+		text,
+		url.QueryEscape(GetAddToGroupLinkWithoutHeader()),
+		strings.ReplaceAll(url.QueryEscape(inviteText), "+", "%20"),
+	)
+}
+
 func InitUtils(bot *telego.Bot) {
 	utilsBotInstance = bot
+}
+
+func IsGroup(upd telego.Update) bool {
+	return upd.Message.From.ID != upd.Message.Chat.ID
 }
