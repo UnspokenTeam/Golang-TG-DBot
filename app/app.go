@@ -7,6 +7,7 @@ import (
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
+	"github.com/unspokenteam/golang-tg-dbot/app/handler_utils"
 	"github.com/valyala/fasthttp"
 	"logger"
 	"middlewares"
@@ -44,6 +45,7 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) *telego.B
 	if err != nil {
 		logger.LogFatal(err.Error(), "configuring", nil)
 	}
+	handler_utils.InitUtils(bot)
 	return bot
 }
 

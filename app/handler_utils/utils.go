@@ -2,9 +2,12 @@ package handler_utils
 
 import (
 	"fmt"
+	"github.com/mymmrac/telego"
 	"regexp"
 	"strings"
 )
+
+var utilsBotInstance *telego.Bot
 
 type Placeholder struct {
 	ID    string
@@ -67,7 +70,7 @@ func EscapeMarkdownV2Smart(input string) string {
 		return makePlaceholder(escapeInlineCode(content))
 	})
 
-	reLinks := regexp.MustCompile(`\[(.+?)\]\((.+?)\)`)
+	reLinks := regexp.MustCompile(`\[((?:\\.|[^\[\]\\])+)\]\(((?:\\.|[^()\s])+)\)`)
 	input = reLinks.ReplaceAllStringFunc(input, func(match string) string {
 		matches := reLinks.FindStringSubmatch(match)
 		escapedText := escapeMarkdownV2Base(matches[1])
@@ -84,6 +87,13 @@ func EscapeMarkdownV2Smart(input string) string {
 }
 
 func MentionUser(name string, userID int64) string {
-	escapedName := escapeMarkdownV2Base(name)
-	return fmt.Sprintf("[%s](tg://user?id=%d)", escapedName, userID)
+	return fmt.Sprintf("[%s](tg://user?id=%d)", name, userID)
+}
+
+func GetAddToGroupLink(text string) string {
+	return fmt.Sprintf("[%s](tg://resolve?domain=%s&startgroup=true)", text, utilsBotInstance.Username())
+}
+
+func InitUtils(bot *telego.Bot) {
+	utilsBotInstance = bot
 }
