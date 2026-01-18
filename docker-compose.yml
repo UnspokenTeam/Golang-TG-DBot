@@ -1,3 +1,4 @@
+version: '3.9'
 name: tg-dbot
 
 include:
@@ -11,58 +12,25 @@ include:
   - './deployments/redis/docker-compose.rate-limiter.yml'
   - './deployments/redis/docker-compose.uptrace-cache.yml'
 
-#services:
-#  app-dev:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    environment:
-#      GO_ENV: "DEVELOPMENT"
-#    env_file:
-#      - .env
-#    ports:
-#      - "8001:8000"
-#    networks:
-#      - app-network
-#    depends_on:
-#      - db
-#      - redis
-#      - loki
-#      - promtail
-#      - grafana
-#    profiles: ["dev"]
-#    deploy:
-#      resources:
-#        limits:
-#          memory: 500M
-#        reservations:
-#          memory: 250M
-#
-#  app-prod:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#    env_file:
-#      - .env
-#    environment:
-#      GO_ENV: "PRODUCTION"
-#    ports:
-#      - "8000:8000"
-#    networks:
-#      - app-network
-#    depends_on:
-#      - db
-#      - redis
-#      - loki
-#      - promtail
-#      - grafana
-#    profiles: ["prod"]
-#    deploy:
-#      resources:
-#        limits:
-#          memory: 2500M
-#        reservations:
-#          memory: 1000M
+services:
+  bot-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+#    image: your-registry.com/your-bot:latest  # Для push в registry
+    container_name: telegram-bot-prod
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    env_file:
+      - example.env
+      - .env
+    depends_on:
+      - uptrace
+      - rate-limiter-redis
+    networks:
+      - tg-dbot-network
+    profiles: ["prod"]
 
 networks:
   tg-dbot-network:
