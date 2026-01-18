@@ -11,7 +11,7 @@ RUN go build -o Bot github.com/unspokenteam/golang-tg-dbot
 FROM alpine:3.22
 WORKDIR /app
 
-COPY --from=build /app/Bot .
+COPY --from=build /internal/app/Bot .
 COPY --from=build /usr/local/bin/goose /usr/local/bin/goose
 COPY ./sql ./sql
 

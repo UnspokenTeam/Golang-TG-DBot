@@ -11,13 +11,13 @@ seed_data:
 
   users:
     - key: user1
-      name: ${UPTRACE_USER}
-      email: admin@uptrace.local
+      name: Admin
+      email: ${UPTRACE_EMAIL}
       password: ${UPTRACE_PASS}
       email_confirmed: true
     - key: user2
-      name: ${UPTRACE_RO_USER}
-      email: ro@uptrace.local
+      name: RoUser
+      email: ${UPTRACE_RO_EMAIL}
       password: ${UPTRACE_RO_PASS}
       email_confirmed: true
 

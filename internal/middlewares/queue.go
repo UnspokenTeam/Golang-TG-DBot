@@ -4,15 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/mymmrac/telego"
-	"github.com/mymmrac/telego/telegoapi"
-	hndUtils "github.com/unspokenteam/golang-tg-dbot/app/handler_utils"
-	"golang.org/x/time/rate"
-	"logger"
 	"os"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/mymmrac/telego"
+	"github.com/mymmrac/telego/telegoapi"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
+	hndUtils "github.com/unspokenteam/golang-tg-dbot/pkg/utils"
+	"golang.org/x/time/rate"
 )
 
 var (

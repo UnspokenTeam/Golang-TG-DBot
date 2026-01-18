@@ -1,22 +1,26 @@
 package middlewares
 
 import (
-	"configs"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
+
+	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
+
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	"github.com/redis/go-redis/v9"
-	"logger"
-	"strconv"
-	"time"
+	config "github.com/unspokenteam/golang-tg-dbot/internal/config"
 )
 
 const (
-	QUIET = 0
-	LOUD  = 1
-	MUTED = 2
+	UNDEFINED = -1
+	QUIET     = 0
+	LOUD      = 1
+	MUTED     = 2
 )
 
 func muteSpammer(ctx context.Context, bot *telego.Bot, message *telego.Message) {
@@ -26,7 +30,7 @@ func muteSpammer(ctx context.Context, bot *telego.Bot, message *telego.Message) 
 		CanSendOtherMessages:  &mutePtr,
 		CanAddWebPagePreviews: &mutePtr,
 	}
-	until := message.Date + configs.MiddlewareConfig.SpamCooldown
+	until := message.Date + config.MiddlewareConfig.SpamCooldown
 
 	if err := bot.RestrictChatMember(ctx, &telego.RestrictChatMemberParams{
 		ChatID:                        message.Chat.ChatID(),
@@ -79,18 +83,33 @@ func tryMuteSpammer(bot *telego.Bot, message *telego.Message) {
 	}
 }
 
+func makeKey(chatID, userID int64) string {
+	buf := make([]byte, 16)
+	binary.BigEndian.PutUint64(buf[0:8], uint64(chatID))
+	binary.BigEndian.PutUint64(buf[8:16], uint64(userID))
+	return string(buf)
+}
+
+func incrUserState(ctx context.Context, redisId string, currentState int, cooldown time.Duration, message *telego.Message) bool {
+	if setErr := config.Rdb.Set(
+		ctx,
+		redisId,
+		currentState+1,
+		cooldown,
+	).Err(); setErr != nil {
+		logger.LogError(fmt.Sprintf("Cannot set rate limit: %s", setErr), "cantSetRateLimit", message)
+		return false
+	}
+	return true
+}
+
 func rateLimit(ctx context.Context, bot *telego.Bot, message *telego.Message) bool {
 	isRequestHandled := true
-	userStateStr, err := configs.Rdb.Get(ctx, strconv.FormatInt(message.From.ID, 10)).Result()
+	muteCooldown := time.Duration(config.MiddlewareConfig.MuteCooldown) * time.Second
+	redisId := makeKey(message.Chat.ID, message.From.ID)
+	userStateStr, err := config.Rdb.Get(ctx, redisId).Result()
 	if errors.Is(err, redis.Nil) {
-		if setErr := configs.Rdb.Set(
-			ctx,
-			strconv.FormatInt(message.From.ID, 10),
-			QUIET,
-			time.Duration(configs.MiddlewareConfig.MuteCooldown)*time.Second,
-		).Err(); setErr != nil {
-			logger.LogError(fmt.Sprintf("Cannot set rate limit: %s", setErr), "cantSetRateLimit", message)
-		} else {
+		if errIsNil := incrUserState(ctx, redisId, UNDEFINED, muteCooldown, message); errIsNil {
 			isRequestHandled = false
 		}
 	} else if err != nil {
@@ -99,25 +118,11 @@ func rateLimit(ctx context.Context, bot *telego.Bot, message *telego.Message) bo
 		userState, _ := strconv.Atoi(userStateStr)
 		switch userState {
 		case QUIET:
-			if incrErr := configs.Rdb.Set(
-				ctx,
-				strconv.FormatInt(message.From.ID, 10),
-				LOUD,
-				time.Duration(configs.MiddlewareConfig.MuteCooldown)*time.Second,
-			).Err(); incrErr != nil {
-				logger.LogError(fmt.Sprintf("Cannot set rate limit: %s", incrErr), "cantSetRateLimit", message)
-			} else {
+			if errIsNil := incrUserState(ctx, redisId, userState, muteCooldown, message); errIsNil {
 				isRequestHandled = false
 			}
 		case LOUD:
-			if muteErr := configs.Rdb.Set(
-				ctx,
-				strconv.FormatInt(message.From.ID, 10),
-				MUTED,
-				time.Duration(configs.MiddlewareConfig.SpamCooldown)*time.Second,
-			).Err(); muteErr != nil {
-				logger.LogError(fmt.Sprintf("Cannot set rate limit: %s", muteErr), "cantSetRateLimit", message)
-			}
+			incrUserState(ctx, redisId, userState, time.Duration(config.MiddlewareConfig.SpamCooldown)*time.Second, message)
 			go tryMuteSpammer(bot, message)
 		}
 	}

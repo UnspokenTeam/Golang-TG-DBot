@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"fmt"
+
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
-	tu "github.com/mymmrac/telego/telegoutil"
-	hndUtils "github.com/unspokenteam/golang-tg-dbot/app/handler_utils"
-	q "middlewares"
+	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
+	hndUtils "github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 )
 
 func Start(ctx *th.Context, upd telego.Update) {
@@ -21,8 +21,5 @@ func Start(ctx *th.Context, upd telego.Update) {
 			hndUtils.GetSendInviteLink("НАЖМИ, ЧТОБЫ ОТПРАВИТЬ БОТА АДМИНУ ГРУППЫ", "НАЖМИ, ЧТОБЫ ДОБАВИТЬ БОТА В ГРУППУ"),
 		)
 	}
-	q.MessageQueue <- tu.Message(
-		tu.ID(upd.Message.Chat.ID),
-		text,
-	)
+	middlewares.MessageQueue <- hndUtils.GetMsgSendParams(text, upd.Message)
 }

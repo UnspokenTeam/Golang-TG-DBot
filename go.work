@@ -4,9 +4,4 @@ toolchain go1.24.5
 
 use (
 	.
-	./pkg/env_loader
-	./pkg/logger
-	./pkg/postgres
-	./pkg/middlewares
-	./pkg/configs
 )

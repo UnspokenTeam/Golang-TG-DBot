@@ -3,13 +3,15 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/mymmrac/telego"
-	ch "github.com/unspokenteam/golang-tg-dbot/app/app_channels"
-	"golang.org/x/time/rate"
-	"logger"
+
 	"os"
 	"sync"
 	"time"
+
+	"github.com/mymmrac/telego"
+	ch "github.com/unspokenteam/golang-tg-dbot/internal/bot/app_channels"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
+	"golang.org/x/time/rate"
 )
 
 var (

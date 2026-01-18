@@ -1,11 +1,13 @@
-package handler_utils
+package utils
 
 import (
 	"fmt"
-	"github.com/mymmrac/telego"
 	"net/url"
 	"regexp"
 	"strings"
+
+	"github.com/mymmrac/telego"
+	tu "github.com/mymmrac/telego/telegoutil"
 )
 
 var utilsBotInstance *telego.Bot
@@ -114,4 +116,20 @@ func InitUtils(bot *telego.Bot) {
 
 func IsGroup(upd telego.Update) bool {
 	return upd.Message.From.ID != upd.Message.Chat.ID
+}
+
+func GetReplyParams(msg *telego.Message) *telego.ReplyParameters {
+	var msgId int
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.SenderChat.Type == "channel" {
+		msgId = msg.ReplyToMessage.MessageID
+	}
+	return &telego.ReplyParameters{
+		MessageID:                msgId,
+		ChatID:                   msg.Chat.ChatID(),
+		AllowSendingWithoutReply: true,
+	}
+}
+
+func GetMsgSendParams(text string, msg *telego.Message) *telego.SendMessageParams {
+	return tu.Message(tu.ID(msg.Chat.ID), text).WithReplyParameters(GetReplyParams(msg))
 }

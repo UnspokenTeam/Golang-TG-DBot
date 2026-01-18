@@ -1,18 +1,19 @@
 package app
 
 import (
-	"configs"
 	"context"
 	"fmt"
+	"os"
+	"time"
+
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
-	"github.com/unspokenteam/golang-tg-dbot/app/handler_utils"
+	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
+	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
-	"logger"
-	"middlewares"
-	"os"
-	"time"
 )
 
 var (
@@ -45,7 +46,7 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) {
 	if err != nil {
 		logger.LogFatal(err.Error(), "configuring", nil)
 	}
-	handler_utils.InitUtils(bot)
+	utils.InitUtils(bot)
 }
 
 func waitForGracefulShutdown(funcCtx context.Context, server *fasthttp.Server, ch <-chan telego.Update, hnd *th.BotHandler) {

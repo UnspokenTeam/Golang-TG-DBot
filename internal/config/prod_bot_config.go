@@ -1,8 +1,8 @@
 package configs
 
 import (
-	"env_loader"
-	"logger"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/env_loader"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 )
 
 type ProdBotConfig struct {

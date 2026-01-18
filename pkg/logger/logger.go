@@ -3,11 +3,12 @@ package logger
 import (
 	"encoding/json"
 	"fmt"
-	ch "github.com/unspokenteam/golang-tg-dbot/app/app_channels"
 	"os"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	ch "github.com/unspokenteam/golang-tg-dbot/internal/bot/app_channels"
 )
 
 var (

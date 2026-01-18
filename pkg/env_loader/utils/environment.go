@@ -3,12 +3,13 @@ package env_loader
 import (
 	"errors"
 	"fmt"
-	"logger"
 	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 )
 
 type envType int
