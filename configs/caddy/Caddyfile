@@ -19,14 +19,14 @@ click.{$DOMAIN} {
 }
 
 uptrace.{$DOMAIN} {
-    reverse_proxy uptrace:14319 {
+    reverse_proxy uptrace:14318 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
 }
 
 db.{$DOMAIN} {
-    reverse_proxy uptrace:14319 {
+    reverse_proxy uptrace:6432 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
