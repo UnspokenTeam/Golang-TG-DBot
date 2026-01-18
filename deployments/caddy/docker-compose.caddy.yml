@@ -1,0 +1,30 @@
+services:
+  caddy:
+    image: caddy:2.11-alpine
+    container_name: tg-dbot-caddy
+    restart: unless-stopped
+    profiles: ["prod"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./../../configs/caddy/Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/metrics" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - tg-dbot-network
+
+volumes:
+  caddy_data:
+  caddy_config:

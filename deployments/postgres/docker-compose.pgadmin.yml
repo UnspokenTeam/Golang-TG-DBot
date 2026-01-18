@@ -1,0 +1,29 @@
+services:
+  pgadmin:
+    profiles: [prod]
+    container_name: tg-dbot-pgadmin
+    image: dpage/pgadmin4:9.11
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_LISTEN_PORT: ${PGADMIN_LISTEN_PORT}
+    ports:
+      - "6432:6432"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./../../configs/postgres/servers.json:/pgadmin4/servers.json
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6432/misc/ping" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - tg-dbot-network
+
+volumes:
+  pgadmin-data:

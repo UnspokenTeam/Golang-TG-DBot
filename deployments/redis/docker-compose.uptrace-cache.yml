@@ -1,0 +1,27 @@
+services:
+  uptrace-cache-redis:
+    image: redis:8.4.0-alpine
+    container_name: tg-dbot-uptrace-cache-redis
+    restart: unless-stopped
+    ports:
+      - "7379:6379"
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - uptrace-cache_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tg-dbot-network
+    profiles: ["prod"]
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 200M
+
+volumes:
+  uptrace-cache_data:

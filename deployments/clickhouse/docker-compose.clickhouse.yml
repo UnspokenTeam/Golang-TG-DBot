@@ -1,0 +1,28 @@
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12-alpine
+    container_name: tg-dbot-clickhouse-server
+    profiles: ["prod"]
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./../../configs/clickhouse/users.xml:/etc/clickhouse-server/users.d/users.xml
+      - ./../../configs/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
+    environment:
+      CLICKHOUSE_DB: otel
+      ADMIN_PASSWORD: ${ClickhouseConfig__PASSWORD}
+      OTEL_WRITER_PASSWORD: ${ClickhouseConfig__OTEL_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "clickhouse-client --query 'SELECT 1'" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - tg-dbot-network
+
+volumes:
+  clickhouse_data:

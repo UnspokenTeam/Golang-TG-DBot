@@ -1,0 +1,8 @@
+FROM amacneil/dbmate:2.29.3 AS dbmate-binary
+
+FROM scratch
+
+COPY --from=dbmate-binary /usr/local/bin/dbmate /dbmate
+WORKDIR .
+
+ENTRYPOINT ["/dbmate"]

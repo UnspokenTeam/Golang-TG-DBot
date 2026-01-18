@@ -1,0 +1,26 @@
+services:
+  rate-limiter-redis:
+    image: redis:8.4.0-alpine
+    container_name: tg-dbot-rate-limiter-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 128mb --maxmemory-policy volatile-lru
+    volumes:
+      - rate-limiter_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - tg-dbot-network
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+        reservations:
+          memory: 200M
+
+volumes:
+  rate-limiter_data:
