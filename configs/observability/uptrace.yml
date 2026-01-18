@@ -33,7 +33,7 @@ seed_data:
     - key: org_user2
       org_key: org1
       user_key: user2
-      role: member
+      role: viewer
 
   projects:
     - key: project1
@@ -53,7 +53,7 @@ seed_data:
     - key: project_user2
       project_key: project1
       org_user_key: org_user2
-      perm_level: viewer
+      perm_level: view
 
 listen:
   grpc:
