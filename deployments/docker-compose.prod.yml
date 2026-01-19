@@ -1,0 +1,34 @@
+version: '3.9'
+name: tg-dbot-prod
+
+include:
+  - 'caddy/docker-compose.caddy.yml'
+  - 'clickhouse/docker-compose.clickhouse.yml'
+  - 'observability/docker-compose.cadvisor.yml'
+  - 'observability/docker-compose.uptrace.yml'
+  - 'postgres/docker-compose.postgres.yml'
+  - 'postgres/docker-compose.pgadmin.yml'
+  - 'postgres/docker-compose.migrator.yml'
+  - 'redis/docker-compose.rate-limiter.yml'
+  - 'redis/docker-compose.uptrace-cache.yml'
+
+services:
+  bot-prod:
+    image: ${REGISTRY_URL}/${REPO_URL}/${BOT_IMAGE_NAME}:${IMAGE_TAG}
+    container_name: telegram-bot-prod
+    pull_policy: always
+    restart: unless-stopped
+    ports:
+      - "8080:8000"
+    env_file:
+      - prod.env
+    depends_on:
+      - uptrace
+      - rate-limiter-redis
+    networks:
+      - tg-dbot-network
+    profiles: ["prod"]
+
+networks:
+  tg-dbot-network:
+    driver: bridge
