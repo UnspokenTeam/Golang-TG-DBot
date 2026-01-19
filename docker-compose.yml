@@ -3,7 +3,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${REGISTRY_URL}/${REPO_URL}/${BOT_IMAGE_NAME}:${IMAGE_TAG}
     container_name: telegram-bot
     restart: unless-stopped
     ports:

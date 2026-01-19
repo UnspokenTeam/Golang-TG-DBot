@@ -45,5 +45,6 @@ jobs:
           script: |
             cd ${{ secrets.WORK_DIR }}
             git pull origin main
+            cd deployments
             docker compose -f docker-compose.prod.yml --profile prod up -d
-            docker image prune -af
+            docker image prune -f
