@@ -1,11 +1,7 @@
 api.{$DOMAIN} {
-    reverse_proxy /webhook* app:8080 {
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-For {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-    }
+    reverse_proxy telegram-bot-prod:8080
 
-    handle / {
+    handle {
         respond "OK" 200
     }
 }

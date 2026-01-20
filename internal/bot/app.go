@@ -93,8 +93,10 @@ func Run(env string, appCtx context.Context) {
 		prodConfig := configs.GetProdConfig()
 		initBotInstance(appCtx, prodConfig.ProdToken, false)
 
+		webhookPath := "/" + bot.Token()
+		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
 		_ = bot.SetWebhook(appCtx, &telego.SetWebhookParams{
-			URL:         fmt.Sprintf("https://%s/%s", prodConfig.CaddyDomain, bot.Token()),
+			URL:         webhookURL,
 			SecretToken: bot.SecretToken(),
 		})
 
@@ -103,7 +105,7 @@ func Run(env string, appCtx context.Context) {
 
 		updatesCh, _ = bot.UpdatesViaWebhook(
 			appCtx,
-			telego.WebhookFastHTTP(srv, "/bot", bot.SecretToken()),
+			telego.WebhookFastHTTP(srv, webhookPath, bot.SecretToken()),
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
 		)
 
