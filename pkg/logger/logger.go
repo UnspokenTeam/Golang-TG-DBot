@@ -52,12 +52,12 @@ func newLogEntry(level, message, eventType string, eventFields interface{}, isEr
 }
 
 func sanitizeAndFilterMessage(msg string) (string, bool) {
-	text := strings.ReplaceAll(msg, token, "token")
-	if secretToken != "" {
-		text = strings.ReplaceAll(text, secretToken, "token")
-	}
+	//text := strings.ReplaceAll(msg, token, "token")
+	//if secretToken != "" {
+	//	text = strings.ReplaceAll(text, secretToken, "token")
+	//}
 	shouldLog := !strings.Contains(msg, "getUpdates")
-	return text, shouldLog
+	return msg, shouldLog
 }
 
 func InitLogger(botToken string, secretBotToken string, jsonifyStackSetting bool) {

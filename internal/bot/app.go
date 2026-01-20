@@ -95,12 +95,15 @@ func Run(env string, appCtx context.Context) {
 
 		webhookPath := "/" + bot.Token()
 		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
-		_ = bot.SetWebhook(appCtx, &telego.SetWebhookParams{
-			URL:         webhookURL,
-			SecretToken: bot.SecretToken(),
-		})
 
 		info, _ := bot.GetWebhookInfo(appCtx)
+		if info.URL != webhookURL {
+			_ = bot.SetWebhook(appCtx, &telego.SetWebhookParams{
+				URL:         webhookURL,
+				SecretToken: bot.SecretToken(),
+			})
+			info, _ = bot.GetWebhookInfo(appCtx)
+		}
 		logger.LogInfo(fmt.Sprintf("Webhook Info: %+v\n", info), "webhookSetup", nil)
 
 		updatesCh, _ = bot.UpdatesViaWebhook(

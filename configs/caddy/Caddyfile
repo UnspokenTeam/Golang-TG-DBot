@@ -22,7 +22,7 @@ uptrace.{$DOMAIN} {
 }
 
 db.{$DOMAIN} {
-    reverse_proxy uptrace:6432 {
+    reverse_proxy pgadmin:6432 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
