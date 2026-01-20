@@ -1,12 +1,5 @@
-go 1.24.5
+go 1.25.6
 
-toolchain go1.24.5
+toolchain go1.25.6
 
-use (
-	.
-	./pkg/env_loader
-	./pkg/logger
-	./pkg/postgres
-	./pkg/middlewares
-	./pkg/configs
-)
+use .

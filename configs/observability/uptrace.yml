@@ -1,0 +1,95 @@
+service:
+  env: ${UPTRACE_ENV:hosted}
+  secret: ${UPTRACE_SECRET}
+
+site:
+  url: http://localhost:14318
+
+seed_data:
+  update: true
+  delete: true
+
+  users:
+    - key: user1
+      name: Admin
+      email: ${UPTRACE_EMAIL}
+      password: ${UPTRACE_PASS}
+      email_confirmed: true
+    - key: user2
+      name: RoUser
+      email: ${UPTRACE_RO_EMAIL}
+      password: ${UPTRACE_RO_PASS}
+      email_confirmed: true
+
+  orgs:
+    - key: org1
+      name: UnspokenTeam
+
+  org_users:
+    - key: org_user1
+      org_key: org1
+      user_key: user1
+      role: owner
+    - key: org_user2
+      org_key: org1
+      user_key: user2
+      role: viewer
+
+  projects:
+    - key: project1
+      name: TG D-Bot
+      org_key: org1
+
+  project_tokens:
+    - key: otlp_writer
+      project_key: project1
+      token: ${UPTRACE_PROJECT_SECRET}
+
+  project_users:
+    - key: project_user1
+      project_key: project1
+      org_user_key: org_user1
+      perm_level: admin
+    - key: project_user2
+      project_key: project1
+      org_user_key: org_user2
+      perm_level: view
+
+listen:
+  grpc:
+    addr: 0.0.0.0:14317
+  http:
+    addr: 0.0.0.0:14318
+
+ch_cluster:
+  shards:
+    - replicas:
+        - addr: clickhouse:9000
+          user: ${CLICKHOUSE_USER}
+          password: ${CLICKHOUSE_PASS}
+          database: otel
+          max_execution_time: 15s
+
+pg:
+  addr: postgres-db:5432
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASS}
+  database: ${POSTGRES_DB}
+
+redis_cache:
+  addrs:
+    1: uptrace-cache-redis:6379
+  username: ""
+  password: ""
+  db: 0
+
+ch_schema:
+  compression: ZSTD(1)
+
+telegram:
+  bot_token: ${UPTRACE_TG_TOKEN}
+
+logging:
+  level: INFO
+
+

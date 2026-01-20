@@ -1,19 +1,22 @@
-FROM golang:1.24.5-alpine3.22 AS build
+FROM golang:1.25.6-alpine AS builder
 
-WORKDIR /app
-RUN apk add --no-cache curl
-RUN curl -fsSL https://raw.githubusercontent.com/pressly/goose/master/install.sh | sh
+WORKDIR /build
+
+COPY go.mod go.sum go.work go.work.sum ./
+RUN go mod download
+
 COPY . .
 
-RUN go mod download
-RUN go build -o Bot github.com/unspokenteam/golang-tg-dbot
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -a \
+    -installsuffix cgo \
+    -o bot \
+    ./cmd/bot/main.go
 
-FROM alpine:3.22
-WORKDIR /app
+FROM scratch
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /build/bot /bot
 
-COPY --from=build /app/Bot .
-COPY --from=build /usr/local/bin/goose /usr/local/bin/goose
-COPY ./sql ./sql
-
-EXPOSE 8000
-ENTRYPOINT goose -dir ./sql postgres "host=$DB_HOST port=$DB_PORT user=$DB_USER dbname=$DB_NAME password=$DB_PASSWORD sslmode=disable" up && ./Bot
+EXPOSE 8080
+ENTRYPOINT ["/bot"]

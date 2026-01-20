@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "App DB",
+      "Group": "Servers",
+      "Host": "tg-dbot-postgres",
+      "Port": 5432,
+      "MaintenanceDB": "bot_db",
+      "Username": "postgres",
+      "SSLMode": "prefer"
+    }
+  }
+}

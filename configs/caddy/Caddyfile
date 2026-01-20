@@ -1,0 +1,29 @@
+api.{$DOMAIN} {
+    reverse_proxy telegram-bot-prod:8080
+
+    handle {
+        respond "OK" 200
+    }
+}
+
+
+click.{$DOMAIN} {
+    reverse_proxy clickhouse:8123 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+uptrace.{$DOMAIN} {
+    reverse_proxy uptrace:14318 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}
+
+db.{$DOMAIN} {
+    reverse_proxy uptrace:6432 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+    }
+}

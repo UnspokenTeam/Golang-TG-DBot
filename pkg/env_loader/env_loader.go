@@ -1,9 +1,10 @@
 package env_loader
 
 import (
-	envloader "env_loader/utils"
 	"errors"
 	"reflect"
+
+	envloader "github.com/unspokenteam/golang-tg-dbot/pkg/env_loader/utils"
 )
 
 type EnvLoader struct {

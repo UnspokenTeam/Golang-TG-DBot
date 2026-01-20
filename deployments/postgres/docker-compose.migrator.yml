@@ -1,0 +1,16 @@
+services:
+  dbmate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    container_name: tg-dbot-migrator
+    volumes:
+      - ../../internal/db/migrations:/db/migrations:ro
+    environment:
+      DATABASE_URL: "postgres://${PostgresConfig__PGUSER}:${PostgresConfig__PGPASS}@${PostgresConfig__HOST}:${PostgresConfig__PORT}/${PostgresConfig__PGDB}?sslmode=disable"
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    command: up
+    networks:
+      - tg-dbot-network
