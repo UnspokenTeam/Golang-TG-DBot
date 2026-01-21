@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     profiles: ["prod"]
     environment:
-      DOMAIN: ${DOMAIN}
+      DOMAIN: ${ProdBotConfig__CADDY_DOMAIN}
     cap_add:
       - NET_ADMIN
     ports:
