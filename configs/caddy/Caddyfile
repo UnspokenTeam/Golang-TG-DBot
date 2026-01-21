@@ -1,11 +1,6 @@
 api.{$DOMAIN} {
     reverse_proxy telegram-bot-prod:8080
-
-    handle {
-        respond "OK" 200
-    }
 }
-
 
 click.{$DOMAIN} {
     reverse_proxy clickhouse:8123 {

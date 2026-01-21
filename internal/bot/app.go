@@ -95,7 +95,6 @@ func Run(env string, appCtx context.Context) {
 
 		webhookPath := "/" + bot.Token()
 		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
-		fmt.Println(env, webhookURL)
 
 		info, _ := bot.GetWebhookInfo(appCtx)
 		if info.URL != webhookURL {
@@ -107,13 +106,11 @@ func Run(env string, appCtx context.Context) {
 		}
 		logger.LogInfo(fmt.Sprintf("Webhook Info: %+v\n", info), "webhookSetup", nil)
 
-		var webhookerr error
-		updatesCh, webhookerr = bot.UpdatesViaWebhook(
+		updatesCh, _ = bot.UpdatesViaWebhook(
 			appCtx,
 			telego.WebhookFastHTTP(srv, webhookPath, bot.SecretToken()),
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
 		)
-		fmt.Println(webhookerr)
 
 		go func() { _ = srv.ListenAndServe(fmt.Sprintf(":%d", prodConfig.AppPort)) }()
 		jsonifyStack = true
