@@ -5,6 +5,7 @@ import (
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	hnd "github.com/unspokenteam/golang-tg-dbot/internal/bot/handlers"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 )
@@ -13,11 +14,11 @@ func handlePanic() {
 	panicErr := recover()
 	if panicErr != nil {
 		logger.LogError(fmt.Sprintf("panic: %s", panicErr), "PanicRestart", nil)
-		go RestartAfterPanic()
+		channels.ShutdownChannel <- struct{}{}
 	}
 }
 
-func panicHandlerWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wrappedFunc func(*th.Context, telego.Update)) {
+func handlerWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wrappedFunc func(*th.Context, telego.Update)) {
 	defer handlePanic()
 	//hnd.HandleUser(ctxWrapper, updateWrapper)
 	wrappedFunc(ctxWrapper, updateWrapper)
@@ -27,7 +28,7 @@ func registerHandler(handler *th.BotHandler, command []string, handleFunc func(*
 	for _, commandBind := range command {
 		handler.Handle(
 			func(thCtx *th.Context, update telego.Update) error {
-				panicHandlerWrapper(thCtx, update, handleFunc)
+				handlerWrapper(thCtx, update, handleFunc)
 				return nil
 			},
 			th.CommandEqual(commandBind),

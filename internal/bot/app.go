@@ -20,7 +20,6 @@ var (
 	bot       *telego.Bot
 	updatesCh <-chan telego.Update
 	err       error
-	Done      chan struct{}
 )
 
 func initBotInstance(appCtx context.Context, token string, isDev bool) {
@@ -28,6 +27,7 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) {
 	if isDev {
 		loggerOpt = telego.WithDefaultDebugLogger()
 	} else {
+		//todo: переписать логгер на slog
 		loggerOpt = telego.WithLogger(logger.TelegoLogger{})
 	}
 	bot, err = telego.NewBot(
@@ -49,47 +49,17 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) {
 	utils.InitUtils(bot)
 }
 
-func waitForGracefulShutdown(funcCtx context.Context, server *fasthttp.Server, ch <-chan telego.Update, hnd *th.BotHandler) {
-	defer middlewares.ShutdownQueue()
-	<-funcCtx.Done()
-	logger.LogInfo("Stopping...", "gracefulShutdown", nil)
-
-	stopCtx, stopCancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer stopCancel()
-
-	if env == "PRODUCTION" {
-		_ = server.ShutdownWithContext(stopCtx)
-		logger.LogInfo("Server done...", "gracefulShutdown", nil)
-	}
-
-	for len(ch) > 0 || len(middlewares.MessageQueue) > 0 {
-		select {
-		case <-stopCtx.Done():
-			break
-		case <-time.After(time.Microsecond * 100):
-			// Continue
-		}
-	}
-	logger.LogInfo("Webhook done...", "gracefulShutdown", nil)
-
-	_ = hnd.StopWithContext(stopCtx)
-	logger.LogInfo("Bot handler done...", "gracefulShutdown", nil)
-
-	close(Done)
-}
-
-func Run(env string, appCtx context.Context) {
-	Done = make(chan struct{})
+func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	jsonifyStack := false
 
 	srv := &fasthttp.Server{}
 
-	switch env {
-	case "DEVELOPMENT":
+	switch utils.GetEnv() {
+	case utils.DEVELOPMENT:
 		initBotInstance(appCtx, os.Getenv("DEV_TOKEN"), true)
 		updatesCh, _ = bot.UpdatesViaLongPolling(appCtx, nil)
 
-	case "PRODUCTION":
+	case utils.PRODUCTION:
 		prodConfig := configs.GetProdConfig()
 		initBotInstance(appCtx, prodConfig.ProdToken, false)
 
@@ -112,24 +82,17 @@ func Run(env string, appCtx context.Context) {
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
 		)
 
-		go func() { _ = srv.ListenAndServe(fmt.Sprintf(":%d", prodConfig.AppPort)) }()
 		jsonifyStack = true
 
 	default:
-		logger.LogFatal(fmt.Sprintf("Unknown env GO_ENV=%q", env), "configuring", nil)
+		logger.LogFatal(fmt.Sprintf("Unknown env GO_ENV=%q", utils.GetEnv()), "configuring", nil)
 	}
 
 	logger.InitLogger(bot.Token(), bot.SecretToken(), jsonifyStack)
 	configs.LoadBotCommands()
-	middlewares.InitQueue(appCtx, bot)
 	handler, _ := th.NewBotHandler(bot, updatesCh)
-	handler.Use(middlewares.UserFilterMiddleware)
+	handler.Use(middlewares.UserFilterWrapper)
 	InjectTelegoHandlers(handler)
-	go waitForGracefulShutdown(appCtx, srv, updatesCh, handler)
-	go func() { _ = handler.Start() }()
-	logger.LogInfo("Bot started", "configuring", nil)
-	go HealthCheckWithRestart(bot, appCtx)
-
-	<-Done
-	logger.LogInfo("Stopping done", "gracefulShutdown", nil)
+	//todo: работа с конфигом
+	runComponentsWithGracefulShutdown(appCtx, cancelFunc, bot, handler, srv, 8080)
 }

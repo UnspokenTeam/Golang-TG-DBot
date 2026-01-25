@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	ch "github.com/unspokenteam/golang-tg-dbot/internal/bot/app_channels"
+	ch "github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 )
 
 var (
@@ -88,7 +88,7 @@ func LogFatal(message string, eventType string, eventFields interface{}) {
 	entry := newLogEntry("FATAL", message, eventType, eventFields, true)
 	data, _ := json.MarshalIndent(entry, "", "\t")
 	_, _ = fmt.Fprintln(os.Stderr, string(data))
-	ch.StopChannel <- struct{}{}
+	ch.ShutdownChannel <- struct{}{}
 }
 
 type TelegoLogger struct{}

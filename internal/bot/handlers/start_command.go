@@ -5,7 +5,7 @@ import (
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
-	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/workers"
 	hndUtils "github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 )
 
@@ -21,5 +21,5 @@ func Start(ctx *th.Context, upd telego.Update) {
 			hndUtils.GetSendInviteLink("НАЖМИ, ЧТОБЫ ОТПРАВИТЬ БОТА АДМИНУ ГРУППЫ", "НАЖМИ, ЧТОБЫ ДОБАВИТЬ БОТА В ГРУППУ"),
 		)
 	}
-	middlewares.MessageQueue <- hndUtils.GetMsgSendParams(text, upd.Message)
+	workers.EnqueueMessage(text, upd.Message)
 }
