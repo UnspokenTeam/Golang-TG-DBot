@@ -9,6 +9,7 @@ import (
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
@@ -52,6 +53,7 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) {
 func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	jsonifyStack := false
 
+	channels.InitChannels()
 	srv := &fasthttp.Server{}
 
 	switch utils.GetEnv() {
@@ -92,7 +94,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	configs.LoadBotCommands()
 	handler, _ := th.NewBotHandler(bot, updatesCh)
 	handler.Use(middlewares.UserFilterWrapper)
-	InjectTelegoHandlers(handler)
+	configureHandlers(handler)
 	//todo: работа с конфигом
 	runComponentsWithGracefulShutdown(appCtx, cancelFunc, bot, handler, srv, 8080)
 }

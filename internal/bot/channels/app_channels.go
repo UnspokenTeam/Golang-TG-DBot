@@ -11,3 +11,8 @@ func InitChannels() {
 	ShutdownChannel = make(chan struct{}, 1)
 	SenderChannel = make(chan *telego.SendMessageParams, 1000)
 }
+
+func CloseChannels() {
+	close(ShutdownChannel)
+	close(SenderChannel)
+}

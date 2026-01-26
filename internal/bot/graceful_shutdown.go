@@ -36,4 +36,5 @@ func runComponentsWithGracefulShutdown(
 	componentsWG.Go(func() { workers.OpenQueue(ctx, bot) })
 	componentsWG.Go(func() { workers.RunCommandConsumer(ctx, handler) })
 	componentsWG.Wait()
+	channels.CloseChannels()
 }

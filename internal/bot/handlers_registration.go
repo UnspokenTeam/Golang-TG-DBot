@@ -7,6 +7,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	hnd "github.com/unspokenteam/golang-tg-dbot/internal/bot/handlers"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 )
 
@@ -18,17 +19,14 @@ func handlePanic() {
 	}
 }
 
-func handlerWrapper(ctxWrapper *th.Context, updateWrapper telego.Update, wrappedFunc func(*th.Context, telego.Update)) {
-	defer handlePanic()
-	//hnd.HandleUser(ctxWrapper, updateWrapper)
-	wrappedFunc(ctxWrapper, updateWrapper)
-}
-
-func registerHandler(handler *th.BotHandler, command []string, handleFunc func(*th.Context, telego.Update)) {
+func registerHandler(handler *th.BotHandler, command []string, handleFunc func(*th.Context, telego.Update), roles []roles.Role) {
 	for _, commandBind := range command {
 		handler.Handle(
 			func(thCtx *th.Context, update telego.Update) error {
-				handlerWrapper(thCtx, update, handleFunc)
+				defer handlePanic()
+				hnd.PreprocessUser(thCtx, update)
+				hnd.CheckRoleAccess(thCtx, roles)
+				handleFunc(thCtx, update)
 				return nil
 			},
 			th.CommandEqual(commandBind),
@@ -36,6 +34,7 @@ func registerHandler(handler *th.BotHandler, command []string, handleFunc func(*
 	}
 }
 
-func InjectTelegoHandlers(handler *th.BotHandler) {
-	registerHandler(handler, []string{"start"}, hnd.Start)
+func configureHandlers(handler *th.BotHandler) {
+	registerHandler(handler, []string{"start"}, hnd.Start, []roles.Role{roles.USER, roles.ADMIN, roles.OWNER})
+	registerHandler(handler, []string{"restart"}, hnd.Restart, []roles.Role{roles.OWNER})
 }
