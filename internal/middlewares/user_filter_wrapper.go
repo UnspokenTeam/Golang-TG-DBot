@@ -5,17 +5,19 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
+	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	"github.com/redis/go-redis/v9"
-	config "github.com/unspokenteam/golang-tg-dbot/internal/config"
 )
 
 const (
@@ -23,6 +25,11 @@ const (
 	QUIET     = 0
 	LOUD      = 1
 	MUTED     = 2
+)
+
+var (
+	services *service_wrapper.Services
+	cfg      configs.RateLimiterConfig
 )
 
 func makeKey(chatID, userID int64) string {
@@ -33,7 +40,7 @@ func makeKey(chatID, userID int64) string {
 }
 
 func tryIncrUserState(ctx context.Context, redisId string, currentState int, cooldown time.Duration, message *telego.Message) bool {
-	if setErr := config.Rdb.Set(
+	if setErr := services.RateLimitCache.Set(
 		ctx,
 		redisId,
 		currentState+1,
@@ -47,10 +54,10 @@ func tryIncrUserState(ctx context.Context, redisId string, currentState int, coo
 
 func isUserDeniedByRateLimit(ctx *th.Context, message *telego.Message) bool {
 	userDenied := true
-	muteCooldown := time.Duration(config.MiddlewareConfig.MuteCooldown) * time.Second
+	muteCooldown := time.Duration(cfg.MuteCooldown) * time.Second
 
 	redisId := makeKey(message.Chat.ID, message.From.ID)
-	userStateStr, err := config.Rdb.Get(ctx.Context(), redisId).Result()
+	userStateStr, err := services.RateLimitCache.Get(ctx.Context(), redisId).Result()
 
 	if errors.Is(err, redis.Nil) {
 		userDenied = !tryIncrUserState(ctx.Context(), redisId, UNDEFINED, muteCooldown, message)
@@ -62,27 +69,41 @@ func isUserDeniedByRateLimit(ctx *th.Context, message *telego.Message) bool {
 		case QUIET:
 			userDenied = !tryIncrUserState(ctx.Context(), redisId, userState, muteCooldown, message)
 		case LOUD:
-			tryIncrUserState(ctx.Context(), redisId, userState, time.Duration(config.MiddlewareConfig.SpamCooldown)*time.Second, message)
-			go utils.TryMuteSpammer(ctx, message, config.MiddlewareConfig.SpamCooldown)
+			tryIncrUserState(ctx.Context(), redisId, userState, time.Duration(cfg.SpamCooldown)*time.Second, message)
+			go utils.TryMuteSpammer(ctx, message, cfg.SpamCooldown)
 		}
 	}
 	return userDenied
 }
 
-func UserFilterWrapper(ctx *th.Context, upd telego.Update) error {
-	msg := upd.Message
-	if !utils.IsMessageChatCommand(msg) || isUserDeniedByRateLimit(ctx, msg) {
-		return nil
-	}
-	for {
-		select {
-		case <-ctx.Context().Done():
-			return ctx.Context().Err()
-		default:
-			if len(channels.SenderChannel) < cap(channels.SenderChannel) {
-				return ctx.Next(upd)
+func UserFilterWrapper(wrapper *service_wrapper.Services) func(*th.Context, telego.Update) error {
+	services = wrapper
+	cfg = configs.LoadConfig(services.AppViper, configs.RateLimiterConfig{})
+
+	return func(ctx *th.Context, upd telego.Update) error {
+		msg := upd.Message
+		if !utils.IsMessageChatCommand(msg) || isUserDeniedByRateLimit(ctx, msg) {
+			return nil
+		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx.Context(), 30*time.Second)
+		defer cancel()
+
+		for {
+			select {
+			case <-timeoutCtx.Done():
+				if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
+					log.Printf("Update %d dropped: 30s timeout waiting for channel", upd.UpdateID)
+					return nil
+				}
+
+				return timeoutCtx.Err()
+			default:
+				if len(channels.SenderChannel) < cap(channels.SenderChannel) {
+					return ctx.Next(upd)
+				}
+				time.Sleep(100 * time.Millisecond)
 			}
-			time.Sleep(100 * time.Millisecond)
 		}
 	}
 }

@@ -20,7 +20,7 @@ func gracefulShutdownServer(srv *fasthttp.Server) {
 	}
 }
 
-func StartServer(ctx context.Context, srv *fasthttp.Server, port int16) {
+func StartServer(ctx context.Context, srv *fasthttp.Server, port int) {
 	defer gracefulShutdownServer(srv)
 
 	go func() {

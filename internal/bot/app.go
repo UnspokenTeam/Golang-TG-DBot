@@ -3,13 +3,12 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
-	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
 	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
@@ -18,20 +17,21 @@ import (
 )
 
 var (
-	bot       *telego.Bot
-	updatesCh <-chan telego.Update
-	err       error
+	services *service_wrapper.Services
 )
 
-func initBotInstance(appCtx context.Context, token string, isDev bool) {
-	var loggerOpt telego.BotOption
-	if isDev {
+func initBotInstance(appCtx context.Context, token string) *telego.Bot {
+	var (
+		loggerOpt telego.BotOption
+		err       error
+	)
+	if utils.IsEnvDevelopment() {
 		loggerOpt = telego.WithDefaultDebugLogger()
 	} else {
 		//todo: переписать логгер на slog
 		loggerOpt = telego.WithLogger(logger.TelegoLogger{})
 	}
-	bot, err = telego.NewBot(
+	bot, err := telego.NewBot(
 		token,
 		telego.WithAPICaller(
 			&ta.RetryCaller{
@@ -48,22 +48,32 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) {
 		logger.LogFatal(err.Error(), "configuring", nil)
 	}
 	utils.InitUtils(bot)
+
+	return bot
 }
 
 func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
-	jsonifyStack := false
+	servicesInstance := service_wrapper.Services{}
+	serviceInitErr := servicesInstance.Init()
+	if serviceInitErr != nil {
+		return
+	}
+	services = &servicesInstance
 
-	channels.InitChannels()
+	var (
+		bot       *telego.Bot
+		updatesCh <-chan telego.Update
+	)
 	srv := &fasthttp.Server{}
 
 	switch utils.GetEnv() {
 	case utils.DEVELOPMENT:
-		initBotInstance(appCtx, os.Getenv("DEV_TOKEN"), true)
+		bot = initBotInstance(appCtx, services.AppViper.GetString("DEV_TOKEN"))
 		updatesCh, _ = bot.UpdatesViaLongPolling(appCtx, nil)
 
 	case utils.PRODUCTION:
-		prodConfig := configs.GetProdConfig()
-		initBotInstance(appCtx, prodConfig.ProdToken, false)
+		prodConfig := configs.LoadConfig(services.AppViper, configs.ProdBotConfig{})
+		bot = initBotInstance(appCtx, prodConfig.ProdToken)
 
 		webhookPath := "/" + bot.Token()
 		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
@@ -84,17 +94,14 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
 		)
 
-		jsonifyStack = true
-
 	default:
 		logger.LogFatal(fmt.Sprintf("Unknown env GO_ENV=%q", utils.GetEnv()), "configuring", nil)
 	}
 
-	logger.InitLogger(bot.Token(), bot.SecretToken(), jsonifyStack)
-	configs.LoadBotCommands()
+	//logger.InitLogger(bot.Token(), bot.SecretToken(), true)
 	handler, _ := th.NewBotHandler(bot, updatesCh)
-	handler.Use(middlewares.UserFilterWrapper)
+	filterWrapper := middlewares.UserFilterWrapper(services)
+	handler.Use(filterWrapper)
 	configureHandlers(handler)
-	//todo: работа с конфигом
-	runComponentsWithGracefulShutdown(appCtx, cancelFunc, bot, handler, srv, 8080)
+	runComponentsWithGracefulShutdown(appCtx, cancelFunc, bot, handler, srv)
 }

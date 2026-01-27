@@ -1,0 +1,41 @@
+start_commands:
+  - start
+
+help_commands:
+  - help
+
+up_commands:
+  - up
+
+global_stats_commands:
+  - global_stats
+
+chat_stats_commands:
+  - chat
+
+play_commands:
+  - play
+
+action_commands:
+  - perform
+
+random_action_commands:
+  - perform_random
+
+my_stats_commands:
+  - my_stats
+
+m_commands:
+  - m
+
+f_commands:
+  - f
+
+s_commands:
+  - s
+
+user_stats_commands:
+  - users
+
+restart_commands:
+  - restart

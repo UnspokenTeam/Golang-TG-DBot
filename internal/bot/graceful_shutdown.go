@@ -27,10 +27,11 @@ func runComponentsWithGracefulShutdown(
 	bot *telego.Bot,
 	handler *th.BotHandler,
 	srv *fasthttp.Server,
-	port int16,
 ) {
+	channels.InitChannels()
 	go panicListener(cancel)
 	if utils.IsEnvProduction() {
+		port := services.AppViper.GetInt("WEBHOOK_PORT")
 		componentsWG.Go(func() { workers.StartServer(ctx, srv, port) })
 	}
 	componentsWG.Go(func() { workers.OpenQueue(ctx, bot) })
