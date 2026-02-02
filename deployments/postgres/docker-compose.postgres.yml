@@ -4,16 +4,16 @@ services:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${PostgresConfig__PGUSER}
-      POSTGRES_PASSWORD: ${PostgresConfig__PGPASS}
-      POSTGRES_DB: ${PostgresConfig__PGDB}
-      PGUSER: ${PostgresConfig__PGUSER}
-      PGDATABASE: ${PostgresConfig__PGDB}
-      UPTRACE_DB: ${PostgresConfig__UPTRACE_DB}
-      UPTRACE_USER: ${PostgresConfig__UPTRACE_USER}
-      UPTRACE_PASSWORD: ${PostgresConfig__UPTRACE_PASS}
+      POSTGRES_USER: ${POSTGRES_PGUSER}
+      POSTGRES_PASSWORD: ${POSTGRES_PGPASS}
+      POSTGRES_DB: ${POSTGRES_PGDB}
+      PGUSER: ${POSTGRES_PGUSER}
+      PGDATABASE: ${POSTGRES_PGDB}
+      UPTRACE_DB: ${POSTGRES_UPTRACE_DB}
+      UPTRACE_USER: ${POSTGRES_UPTRACE_USER}
+      UPTRACE_PASSWORD: ${POSTGRES_UPTRACE_PASS}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${PostgresConfig__PGUSER} -d ${PostgresConfig__PGDB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_PGUSER} -d ${POSTGRES_PGDB}"]
       interval: 5s
       timeout: 10s
       retries: 10

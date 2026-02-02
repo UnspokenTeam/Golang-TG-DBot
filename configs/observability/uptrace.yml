@@ -64,14 +64,14 @@ listen:
 ch_cluster:
   shards:
     - replicas:
-        - addr: clickhouse:9000
+        - addr: ${CLICKHOUSE_HOST}:${CLICKHOUSE_PORT}
           user: ${CLICKHOUSE_USER}
           password: ${CLICKHOUSE_PASS}
           database: otel
           max_execution_time: 15s
 
 pg:
-  addr: postgres-db:5432
+  addr: ${POSTGRES_HOST}:${POSTGRES_PORT}
   user: ${POSTGRES_USER}
   password: ${POSTGRES_PASS}
   database: ${POSTGRES_DB}
@@ -86,10 +86,19 @@ redis_cache:
 ch_schema:
   compression: ZSTD(1)
 
+  spans_index: { storage_policy: default, ttl_delete: 3 DAY }   # Span search indexes
+  spans_data: { storage_policy: default, ttl_delete: 3 DAY }    # Raw span data
+  span_links: { storage_policy: default, ttl_delete: 3 DAY }    # Span relationship data
+  logs_index: { storage_policy: default, ttl_delete: 3 DAY }    # Log search indexes
+  logs_data: { storage_policy: default, ttl_delete: 3 DAY }     # Raw log data
+  events_index: { storage_policy: default, ttl_delete: 3 DAY }  # Event search indexes
+  events_data: { storage_policy: default, ttl_delete: 3 DAY }   # Raw event data
+  metrics: { storage_policy: default, ttl_delete: 1 DAY }       # Metrics time-series data
+
 telegram:
   bot_token: ${UPTRACE_TG_TOKEN}
 
 logging:
-  level: INFO
+  level: ERROR
 
 
