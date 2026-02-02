@@ -5,14 +5,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"log"
-	"strconv"
+	"log/slog"
 	"time"
 
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
 	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
-	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 
 	"github.com/mymmrac/telego"
@@ -21,10 +19,10 @@ import (
 )
 
 const (
-	UNDEFINED = -1
-	QUIET     = 0
-	LOUD      = 1
-	MUTED     = 2
+	UNDEFINED = iota
+	QUIET
+	LOUD
+	MUTED
 )
 
 var (
@@ -46,7 +44,7 @@ func tryIncrUserState(ctx context.Context, redisId string, currentState int, coo
 		currentState+1,
 		cooldown,
 	).Err(); setErr != nil {
-		logger.LogError(fmt.Sprintf("Cannot set rate limit: %s", setErr), "cantSetRateLimit", message)
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot set rate limit: %s", setErr), "payload", message)
 		return false
 	}
 	return true
@@ -57,20 +55,21 @@ func isUserDeniedByRateLimit(ctx *th.Context, message *telego.Message) bool {
 	muteCooldown := time.Duration(cfg.MuteCooldown) * time.Second
 
 	redisId := makeKey(message.Chat.ID, message.From.ID)
-	userStateStr, err := services.RateLimitCache.Get(ctx.Context(), redisId).Result()
+	userState, err := services.RateLimitCache.Get(ctx.Context(), redisId).Int()
 
 	if errors.Is(err, redis.Nil) {
 		userDenied = !tryIncrUserState(ctx.Context(), redisId, UNDEFINED, muteCooldown, message)
 	} else if err != nil {
-		logger.LogError(fmt.Sprintf("Cannot get rate limit: %s", err), "cantGetRateLimit", message)
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get rate limit: %s", err), "payload", message)
 	} else {
-		userState, _ := strconv.Atoi(userStateStr)
 		switch userState {
 		case QUIET:
 			userDenied = !tryIncrUserState(ctx.Context(), redisId, userState, muteCooldown, message)
 		case LOUD:
 			tryIncrUserState(ctx.Context(), redisId, userState, time.Duration(cfg.SpamCooldown)*time.Second, message)
+			slog.DebugContext(ctx, fmt.Sprintf("Muting user %d...", message.From.ID), "payload", message)
 			go utils.TryMuteSpammer(ctx, message, cfg.SpamCooldown)
+		default:
 		}
 	}
 	return userDenied
@@ -93,10 +92,13 @@ func UserFilterWrapper(wrapper *service_wrapper.Services) func(*th.Context, tele
 			select {
 			case <-timeoutCtx.Done():
 				if errors.Is(timeoutCtx.Err(), context.DeadlineExceeded) {
-					log.Printf("Update %d dropped: 30s timeout waiting for channel", upd.UpdateID)
+					slog.WarnContext(
+						timeoutCtx, "Update dropped: 30s timeout waiting for channel",
+						"update", upd.UpdateID,
+						"payload", upd,
+					)
 					return nil
 				}
-
 				return timeoutCtx.Err()
 			default:
 				if len(channels.SenderChannel) < cap(channels.SenderChannel) {

@@ -1,15 +1,24 @@
 package channels
 
-import "github.com/mymmrac/telego"
+import (
+	"context"
+
+	"github.com/mymmrac/telego"
+)
+
+type Message struct {
+	Msg    *telego.SendMessageParams
+	UpdCtx context.Context
+}
 
 var (
 	ShutdownChannel chan struct{}
-	SenderChannel   chan *telego.SendMessageParams
+	SenderChannel   chan Message
 )
 
 func InitChannels() {
 	ShutdownChannel = make(chan struct{}, 1)
-	SenderChannel = make(chan *telego.SendMessageParams, 1000)
+	SenderChannel = make(chan Message, 1000)
 }
 
 func CloseChannels() {

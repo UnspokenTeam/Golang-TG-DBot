@@ -1,42 +1,44 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
+	"reflect"
+	"runtime"
 
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
-	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	hnd "github.com/unspokenteam/golang-tg-dbot/internal/bot/handlers"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
-	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 )
 
-func handlePanic() {
-	panicErr := recover()
-	if panicErr != nil {
-		logger.LogError(fmt.Sprintf("panic: %s", panicErr), "PanicRestart", nil)
-		channels.ShutdownChannel <- struct{}{}
-	}
-}
-
-func registerHandler(handler *th.BotHandler, command []string, handleFunc func(*th.Context, telego.Update, *service_wrapper.Services), roles []roles.Role) {
+func registerHandler(
+	appCtx context.Context,
+	handler *th.BotHandler,
+	command []string,
+	handleFunc func(context.Context, telego.Update, *service_wrapper.Services),
+	roles []roles.Role,
+) {
 	for _, commandBind := range command {
 		handler.Handle(
 			func(thCtx *th.Context, update telego.Update) error {
 				defer handlePanic()
 				hnd.PreprocessUser(thCtx, update, services)
 				hnd.CheckRoleAccess(thCtx, roles, services)
-				handleFunc(thCtx, update, services)
+				handleFunc(thCtx.Context(), update, services)
 				return nil
 			},
 			th.CommandEqual(commandBind),
 		)
 	}
+	slog.InfoContext(appCtx, fmt.Sprintf("Registered %d commands for %s", len(command), runtime.FuncForPC(reflect.ValueOf(handleFunc).Pointer()).Name()))
 }
 
-func configureHandlers(handler *th.BotHandler) {
+func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	registerHandler(
+		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("start_commands"),
 		hnd.Start,
@@ -44,6 +46,7 @@ func configureHandlers(handler *th.BotHandler) {
 	)
 
 	registerHandler(
+		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("restart_commands"),
 		hnd.Restart,
@@ -51,6 +54,7 @@ func configureHandlers(handler *th.BotHandler) {
 	)
 
 	registerHandler(
+		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("help_commands"),
 		hnd.Help,

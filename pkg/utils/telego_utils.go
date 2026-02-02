@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
@@ -151,24 +152,21 @@ func muteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 		UntilDate:                     until,
 		UseIndependentChatPermissions: true,
 	}); err != nil {
-		//todo: payload
-		ctx.Bot().Logger().Errorf(fmt.Sprintf("restrict chat member error: %s", err), "muteUser", message)
+		slog.ErrorContext(ctx, fmt.Sprintf("Restrict chat member error: %s", err), "payload", message)
 	}
 }
 
 func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 	me, err := utilsBotInstance.GetMe(ctx)
 	if err != nil {
-		// todo: payload
-		ctx.Bot().Logger().Errorf(fmt.Sprintf("Cannot get bot instance: %s", err), "cantGetBotInstance", message)
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get bot instance: %s", err), "payload", message)
 		return
 	}
-	botChatMember, botErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
-		ChatID: message.Chat.ChatID(), UserID: me.ID,
+	botChatMember, getBotErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
+		ChatID: tu.ID(message.Chat.ID), UserID: me.ID,
 	})
-	// todo: message payload
-	if botErr != nil {
-		ctx.Bot().Logger().Errorf(fmt.Sprintf("Cannot get chat bot instance: %s", botErr) + message.Text)
+	if getBotErr != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get chat bot instance: %s", getBotErr), "payload", message)
 		return
 	}
 
@@ -181,11 +179,10 @@ func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 	}
 
 	memberToMute, memberGetErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
-		ChatID: message.Chat.ChatID(), UserID: message.From.ID,
+		ChatID: tu.ID(message.Chat.ID), UserID: message.From.ID,
 	})
 	if memberGetErr != nil {
-		// todo: payload
-		ctx.Bot().Logger().Errorf(fmt.Sprintf("Cannot get chat member instance: %s", memberGetErr), "cantGetMemberInstance", message)
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get chat member instance: %s", memberGetErr), "payload", message)
 	}
 	switch memberToMute.(type) {
 	case *telego.ChatMemberOwner, *telego.ChatMemberAdministrator:

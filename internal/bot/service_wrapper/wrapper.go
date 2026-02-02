@@ -2,10 +2,12 @@ package service_wrapper
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
+	"strings"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 )
 
@@ -14,9 +16,12 @@ type Services struct {
 	AppViper       *viper.Viper
 	CommandsViper  *viper.Viper
 	RateLimitCache *redis.Client
+	TelegoLogger   *logger.TelegoLogger
 }
 
-func (services *Services) Init() error {
+func (services *Services) Init() *Services {
+	services.TelegoLogger = logger.SetupLogger("GoLang TG D-Bot")
+
 	services.AppViper = viper.New()
 	services.AppViper.SetConfigType("env")
 	if utils.IsEnvProduction() {
@@ -25,8 +30,15 @@ func (services *Services) Init() error {
 		services.AppViper.SetConfigFile("example.env")
 	}
 	if err := services.AppViper.ReadInConfig(); err != nil {
-		log.Fatal("Failed to read config:", err)
+		logger.Fatal("Failed to read .env config: %v", err)
 	}
+
+	services.TelegoLogger.WithReplacer(
+		strings.NewReplacer(
+			services.AppViper.GetString("PROD_TOKEN"), "PROD_TOKEN",
+			services.AppViper.GetString("DEV_TOKEN"), "DEV_TOKEN",
+		),
+	)
 
 	services.CommandsViper = viper.New()
 	services.CommandsViper.SetConfigType("yaml")
@@ -36,7 +48,7 @@ func (services *Services) Init() error {
 		services.CommandsViper.SetConfigFile("configs/bot/commands.yaml")
 	}
 	if err := services.CommandsViper.ReadInConfig(); err != nil {
-		log.Fatal("Failed to read config:", err)
+		logger.Fatal("Failed to read yaml config: %v", err)
 	}
 
 	services.RateLimitCache = redis.NewClient(&redis.Options{
@@ -47,5 +59,6 @@ func (services *Services) Init() error {
 		DB: 0,
 	})
 
-	return nil
+	slog.Info("Services configured")
+	return services
 }
