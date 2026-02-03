@@ -1,11 +1,15 @@
 package handlers
 
 import (
-	th "github.com/mymmrac/telego/telegohandler"
+	"context"
+	"log/slog"
+
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
+	"go.opentelemetry.io/otel/trace"
 )
 
-func CheckRoleAccess(ctx *th.Context, roles []roles.Role, services *service_wrapper.Services) {
+func CheckRoleAccess(ctx context.Context, span trace.Span, roles []roles.Role, services *service_wrapper.Services) {
 	//todo: db check
+	slog.InfoContext(ctx, "Checked role access...")
 }

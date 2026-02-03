@@ -9,6 +9,8 @@ import (
 	"github.com/spf13/viper"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Services struct {
@@ -17,9 +19,11 @@ type Services struct {
 	CommandsViper  *viper.Viper
 	RateLimitCache *redis.Client
 	TelegoLogger   *logger.TelegoLogger
+	Tracer         trace.Tracer
 }
 
 func (services *Services) Init() *Services {
+	services.Tracer = otel.Tracer("my-bot")
 	services.TelegoLogger = logger.SetupLogger("GoLang TG D-Bot")
 
 	services.AppViper = viper.New()

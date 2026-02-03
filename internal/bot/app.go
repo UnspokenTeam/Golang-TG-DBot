@@ -15,7 +15,6 @@ import (
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
-	"go.opentelemetry.io/otel"
 )
 
 var (
@@ -55,8 +54,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	servicesInstance := service_wrapper.Services{}
 	services = servicesInstance.Init()
 
-	tracer := otel.Tracer("my-bot")
-	ctx, rootSpan := tracer.Start(appCtx, "Main app span")
+	ctx, rootSpan := services.Tracer.Start(appCtx, "Main app span")
 	defer rootSpan.End()
 
 	switch utils.GetEnv() {

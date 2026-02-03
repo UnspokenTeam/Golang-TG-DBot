@@ -12,22 +12,33 @@ import (
 	hnd "github.com/unspokenteam/golang-tg-dbot/internal/bot/handlers"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func registerHandler(
 	appCtx context.Context,
 	handler *th.BotHandler,
 	command []string,
-	handleFunc func(context.Context, telego.Update, *service_wrapper.Services),
+	handleFunc func(context.Context, trace.Span, telego.Update, *service_wrapper.Services),
 	roles []roles.Role,
 ) {
 	for _, commandBind := range command {
 		handler.Handle(
 			func(thCtx *th.Context, update telego.Update) error {
 				defer handlePanic()
-				hnd.PreprocessUser(thCtx, update, services)
-				hnd.CheckRoleAccess(thCtx, roles, services)
-				handleFunc(thCtx.Context(), update, services)
+
+				ctx, preprocessSpan := services.Tracer.Start(thCtx.Context(), "preprocess_user")
+				defer preprocessSpan.End()
+				hnd.PreprocessUser(ctx, preprocessSpan, update, services)
+
+				ctx, checkRoleSpan := services.Tracer.Start(ctx, "check_user_role")
+				defer checkRoleSpan.End()
+				hnd.CheckRoleAccess(ctx, checkRoleSpan, roles, services)
+
+				ctx, handlerSpan := services.Tracer.Start(ctx, "handler_span")
+				defer handlerSpan.End()
+				handleFunc(ctx, handlerSpan, update, services)
+
 				return nil
 			},
 			th.CommandEqual(commandBind),
