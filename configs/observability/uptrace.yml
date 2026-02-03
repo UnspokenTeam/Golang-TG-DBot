@@ -3,7 +3,7 @@ service:
   secret: ${UPTRACE_SECRET}
 
 site:
-  url: http://localhost:14318
+  url: ${UPTRACE_PROTOCOL}://${UPTRACE_PUBLIC_URL}
 
 seed_data:
   update: true

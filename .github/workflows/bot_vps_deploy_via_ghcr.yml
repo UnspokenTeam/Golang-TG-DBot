@@ -55,5 +55,5 @@ jobs:
             cd ${{ secrets.WORK_DIR }}
             git pull origin main
             cd deployments
-            docker compose -f docker-compose.prod.yml --profile prod up -d
+            docker compose -f docker-compose.prod.yml --env-file ./../.env --profile prod up -d
             docker image prune -f
