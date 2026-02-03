@@ -2,11 +2,13 @@ package utils
 
 import (
 	"fmt"
+	"log/slog"
 	"net/url"
 	"regexp"
 	"strings"
 
 	"github.com/mymmrac/telego"
+	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 )
 
@@ -120,7 +122,7 @@ func IsGroup(upd telego.Update) bool {
 
 func GetReplyParams(msg *telego.Message) *telego.ReplyParameters {
 	var msgId int
-	if msg.ReplyToMessage != nil && msg.ReplyToMessage.SenderChat.Type == "channel" {
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.SenderChat.Type == telego.ChatTypeChannel {
 		msgId = msg.ReplyToMessage.MessageID
 	}
 	return &telego.ReplyParameters{
@@ -132,4 +134,69 @@ func GetReplyParams(msg *telego.Message) *telego.ReplyParameters {
 
 func GetMsgSendParams(text string, msg *telego.Message) *telego.SendMessageParams {
 	return tu.Message(tu.ID(msg.Chat.ID), text).WithReplyParameters(GetReplyParams(msg))
+}
+
+func muteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
+	mutePtr := false
+	perms := &telego.ChatPermissions{
+		CanSendMessages:       &mutePtr,
+		CanSendOtherMessages:  &mutePtr,
+		CanAddWebPagePreviews: &mutePtr,
+	}
+	until := message.Date + cooldown
+
+	if err := utilsBotInstance.RestrictChatMember(ctx.Context(), &telego.RestrictChatMemberParams{
+		ChatID:                        message.Chat.ChatID(),
+		UserID:                        message.From.ID,
+		Permissions:                   *perms,
+		UntilDate:                     until,
+		UseIndependentChatPermissions: true,
+	}); err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Restrict chat member error: %s", err), "payload", message)
+	}
+}
+
+func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
+	me, err := utilsBotInstance.GetMe(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get bot instance: %s", err), "payload", message)
+		return
+	}
+	botChatMember, getBotErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
+		ChatID: tu.ID(message.Chat.ID), UserID: me.ID,
+	})
+	if getBotErr != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get chat bot instance: %s", getBotErr), "payload", message)
+		return
+	}
+
+	allowed := false
+	switch m := botChatMember.(type) {
+	case *telego.ChatMemberOwner:
+		allowed = true
+	case *telego.ChatMemberAdministrator:
+		allowed = m.CanRestrictMembers
+	}
+
+	memberToMute, memberGetErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
+		ChatID: tu.ID(message.Chat.ID), UserID: message.From.ID,
+	})
+	if memberGetErr != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get chat member instance: %s", memberGetErr), "payload", message)
+	}
+	switch memberToMute.(type) {
+	case *telego.ChatMemberOwner, *telego.ChatMemberAdministrator:
+		return
+	}
+	if message.Chat.Type != telego.ChatTypeSupergroup {
+		return
+	}
+	if allowed {
+		muteSpammer(ctx, message, cooldown)
+	}
+}
+
+func IsMessageChatCommand(msg *telego.Message) bool {
+	return !(msg == nil || msg.Chat.Type == telego.ChatTypeChannel || msg.Text == "" ||
+		msg.Text[0] != '/' || msg.IsAutomaticForward || (msg.From != nil && msg.From.IsBot))
 }

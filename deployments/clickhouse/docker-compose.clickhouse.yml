@@ -13,8 +13,8 @@ services:
       - ./../../configs/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
     environment:
       CLICKHOUSE_DB: otel
-      ADMIN_PASSWORD: ${ClickhouseConfig__PASSWORD}
-      OTEL_WRITER_PASSWORD: ${ClickhouseConfig__OTEL_PASSWORD}
+      ADMIN_PASSWORD: ${CLICKHOUSE_PASSWORD}
+      OTEL_WRITER_PASSWORD: ${CLICKHOUSE_OTEL_PASSWORD}
     healthcheck:
       test: [ "CMD-SHELL", "clickhouse-client --query 'SELECT 1'" ]
       interval: 10s

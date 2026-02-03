@@ -3,34 +3,26 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
+	"log/slog"
 	"time"
 
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
 	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
-	"github.com/unspokenteam/golang-tg-dbot/pkg/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
 )
 
 var (
-	bot       *telego.Bot
-	updatesCh <-chan telego.Update
-	err       error
-	Done      chan struct{}
+	services *service_wrapper.Services
 )
 
-func initBotInstance(appCtx context.Context, token string, isDev bool) {
-	var loggerOpt telego.BotOption
-	if isDev {
-		loggerOpt = telego.WithDefaultDebugLogger()
-	} else {
-		loggerOpt = telego.WithLogger(logger.TelegoLogger{})
-	}
-	bot, err = telego.NewBot(
+func initBotInstance(ctx context.Context, token string) *telego.Bot {
+	bot, err := telego.NewBot(
 		token,
 		telego.WithAPICaller(
 			&ta.RetryCaller{
@@ -40,96 +32,90 @@ func initBotInstance(appCtx context.Context, token string, isDev bool) {
 				StartDelay:   time.Millisecond * 10,
 				MaxDelay:     time.Second,
 			}),
-		telego.WithHealthCheck(appCtx),
-		loggerOpt,
+		telego.WithHealthCheck(ctx),
+		telego.WithLogger(services.TelegoLogger),
 	)
 	if err != nil {
-		logger.LogFatal(err.Error(), "configuring", nil)
+		slog.ErrorContext(ctx, fmt.Sprintf("Error while creating bot instance: %v", err))
+		channels.ShutdownChannel <- struct{}{}
 	}
 	utils.InitUtils(bot)
+
+	return bot
 }
 
-func waitForGracefulShutdown(funcCtx context.Context, server *fasthttp.Server, ch <-chan telego.Update, hnd *th.BotHandler) {
-	defer middlewares.ShutdownQueue()
-	<-funcCtx.Done()
-	logger.LogInfo("Stopping...", "gracefulShutdown", nil)
+func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
+	var (
+		bot       *telego.Bot
+		updatesCh <-chan telego.Update
+		srv       = &fasthttp.Server{}
+	)
 
-	stopCtx, stopCancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer stopCancel()
+	servicesInstance := service_wrapper.Services{}
+	services = servicesInstance.Init()
 
-	if env == "PRODUCTION" {
-		_ = server.ShutdownWithContext(stopCtx)
-		logger.LogInfo("Server done...", "gracefulShutdown", nil)
-	}
+	ctx, rootSpan := services.Tracer.Start(appCtx, "Main app span")
+	defer rootSpan.End()
 
-	for len(ch) > 0 || len(middlewares.MessageQueue) > 0 {
-		select {
-		case <-stopCtx.Done():
-			break
-		case <-time.After(time.Microsecond * 100):
-			// Continue
+	switch utils.GetEnv() {
+	case utils.DEVELOPMENT:
+		var channelErr error
+		bot = initBotInstance(ctx, services.AppViper.GetString("DEV_TOKEN"))
+		updatesCh, channelErr = bot.UpdatesViaLongPolling(ctx, nil)
+		if channelErr != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("Channel error: %v", channelErr))
 		}
-	}
-	logger.LogInfo("Webhook done...", "gracefulShutdown", nil)
 
-	_ = hnd.StopWithContext(stopCtx)
-	logger.LogInfo("Bot handler done...", "gracefulShutdown", nil)
-
-	close(Done)
-}
-
-func Run(env string, appCtx context.Context) {
-	Done = make(chan struct{})
-	jsonifyStack := false
-
-	srv := &fasthttp.Server{}
-
-	switch env {
-	case "DEVELOPMENT":
-		initBotInstance(appCtx, os.Getenv("DEV_TOKEN"), true)
-		updatesCh, _ = bot.UpdatesViaLongPolling(appCtx, nil)
-
-	case "PRODUCTION":
-		prodConfig := configs.GetProdConfig()
-		initBotInstance(appCtx, prodConfig.ProdToken, false)
+	case utils.PRODUCTION:
+		prodConfig := configs.LoadConfig(services.AppViper, configs.ProdBotConfig{})
+		bot = initBotInstance(ctx, prodConfig.ProdToken)
 
 		webhookPath := "/" + bot.Token()
 		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
 
-		info, _ := bot.GetWebhookInfo(appCtx)
+		info, getWebhookInfoErr := bot.GetWebhookInfo(ctx)
+		if getWebhookInfoErr != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("Get webhook info error: %v", getWebhookInfoErr), "info", info)
+		}
+
 		if info.URL != webhookURL {
-			_ = bot.SetWebhook(appCtx, &telego.SetWebhookParams{
+			var err error
+			setWebhookErr := bot.SetWebhook(ctx, &telego.SetWebhookParams{
 				URL:         webhookURL,
 				SecretToken: bot.SecretToken(),
 			})
-			info, _ = bot.GetWebhookInfo(appCtx)
-		}
-		logger.LogInfo(fmt.Sprintf("Webhook Info: %+v\n", info), "webhookSetup", nil)
+			if setWebhookErr != nil {
+				slog.ErrorContext(ctx, fmt.Sprintf("Set webhook error: %v", setWebhookErr))
+			}
 
-		updatesCh, _ = bot.UpdatesViaWebhook(
-			appCtx,
+			info, err = bot.GetWebhookInfo(ctx)
+			if err != nil {
+				slog.ErrorContext(ctx, fmt.Sprintf("Get final webhook error: %v", err), "info", info)
+			}
+		}
+		slog.InfoContext(ctx, fmt.Sprintf("Webhook Info: %+v\n", info))
+
+		var channelErr error
+		updatesCh, channelErr = bot.UpdatesViaWebhook(
+			ctx,
 			telego.WebhookFastHTTP(srv, webhookPath, bot.SecretToken()),
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
 		)
-
-		go func() { _ = srv.ListenAndServe(fmt.Sprintf(":%d", prodConfig.AppPort)) }()
-		jsonifyStack = true
+		if channelErr != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("Channel error: %v", channelErr))
+		}
 
 	default:
-		logger.LogFatal(fmt.Sprintf("Unknown env GO_ENV=%q", env), "configuring", nil)
+		slog.ErrorContext(ctx, fmt.Sprintf("Unknown env GO_ENV=%s", utils.GetEnv()))
+		channels.ShutdownChannel <- struct{}{}
 	}
 
-	logger.InitLogger(bot.Token(), bot.SecretToken(), jsonifyStack)
-	configs.LoadBotCommands()
-	middlewares.InitQueue(appCtx, bot)
-	handler, _ := th.NewBotHandler(bot, updatesCh)
-	handler.Use(middlewares.UserFilterMiddleware)
-	InjectTelegoHandlers(handler)
-	go waitForGracefulShutdown(appCtx, srv, updatesCh, handler)
-	go func() { _ = handler.Start() }()
-	logger.LogInfo("Bot started", "configuring", nil)
-	go HealthCheckWithRestart(bot, appCtx)
-
-	<-Done
-	logger.LogInfo("Stopping done", "gracefulShutdown", nil)
+	handler, handlerErr := th.NewBotHandler(bot, updatesCh)
+	if handlerErr != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("Handler creating error: %v", handlerErr))
+	}
+	filterWrapper := middlewares.UserFilterWrapper(services)
+	handler.Use(filterWrapper)
+	configureHandlers(ctx, handler)
+	runComponentsWithGracefulShutdown(ctx, cancelFunc, bot, handler, srv)
 }

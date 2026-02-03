@@ -21,7 +21,12 @@ services:
     ports:
       - "8080:8080"
     env_file:
-      - .env
+      - ../.env
+    volumes:
+      - ../.env:/.env:ro
+      - ../configs/bot/commands.yaml:/commands.yaml:ro
+    environment:
+      UPTRACE_DSN: http://${UPTRACE_PROJECT_SECRET}@uptrace:14318?grpc=14317
     depends_on:
       - uptrace
       - rate-limiter-redis
