@@ -13,7 +13,6 @@ services:
       - ./example.env:/example.env:ro
       - ./configs/bot/commands.yaml:/configs/bot/commands.yaml:ro
     depends_on:
-      - uptrace
       - rate-limiter-redis
     networks:
       - tg-dbot-network
