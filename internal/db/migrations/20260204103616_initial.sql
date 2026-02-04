@@ -52,8 +52,8 @@ CREATE TABLE "actions"
 (
     "id"          bigserial PRIMARY KEY,
     "is_yourself" bool      NOT NULL DEFAULT (true),
-    "chat_id"     bigint    NOT NULL,
-    "user_id"     bigint    NOT NULL,
+    "chat_tg_id"     bigint    NOT NULL,
+    "user_tg_id"     bigint    NOT NULL,
     "action"      text      NOT NULL,
     "created_at"  timestamp NOT NULL DEFAULT (now())
 );
@@ -62,13 +62,13 @@ ALTER TABLE "chat_users"
     ADD FOREIGN KEY ("chat_tg_id") REFERENCES "chats" ("tg_id");
 
 ALTER TABLE "actions"
-    ADD FOREIGN KEY ("chat_id") REFERENCES "chats" ("tg_id");
+    ADD FOREIGN KEY ("chat_tg_id") REFERENCES "chats" ("tg_id");
 
 ALTER TABLE "chat_users"
     ADD FOREIGN KEY ("user_tg_id") REFERENCES "users" ("tg_id");
 
 ALTER TABLE "actions"
-    ADD FOREIGN KEY ("user_id") REFERENCES "users" ("tg_id");
+    ADD FOREIGN KEY ("user_tg_id") REFERENCES "users" ("tg_id");
 
 CREATE INDEX "ix_chat_users_chat_tg_id" ON "chat_users" ("chat_tg_id");
 
@@ -89,14 +89,19 @@ CREATE
 OR REPLACE FUNCTION update_last_message_at()
 RETURNS TRIGGER AS $$
 BEGIN
+
+IF pg_trigger_depth() > 1 THEN
+    RETURN NEW;
+END IF;
+
 UPDATE chats
 SET last_message_at = NOW()
-WHERE tg_id = NEW.chat_id;
+WHERE tg_id = NEW.chat_tg_id;
 
 UPDATE chat_users
 SET last_message_at = NOW()
-WHERE chat_tg_id = NEW.chat_id
-  AND user_tg_id = NEW.user_id;
+WHERE chat_tg_id = NEW.chat_tg_id
+  AND user_tg_id = NEW.user_tg_id;
 
 RETURN NEW;
 END;
@@ -128,13 +133,8 @@ DROP INDEX ix_chats_member_count_active;
 DROP INDEX ix_chat_users_user_tg_id;
 DROP INDEX ix_chat_users_chat_tg_id;
 
-ALTER TABLE actions DROP CONSTRAINT actions_user_id_fkey;
-ALTER TABLE actions DROP CONSTRAINT actions_chat_id_fkey;
-ALTER TABLE chat_users DROP CONSTRAINT chat_users_user_tg_id_fkey;
-ALTER TABLE chat_users DROP CONSTRAINT chat_users_chat_tg_id_fkey;
-
-DROP TABLE actions;
-DROP TABLE chat_users;
-DROP TABLE users;
-DROP TABLE chats;
+DROP TABLE actions CASCADE;
+DROP TABLE chat_users CASCADE;
+DROP TABLE users CASCADE;
+DROP TABLE chats CASCADE;
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
@@ -68,6 +69,9 @@ func (services *Services) Init(ctx context.Context) *Services {
 	})
 
 	postgresCfg := configs.LoadConfig(services.AppViper, configs.PostgresConfig{})
+	if utils.IsEnvDevelopment() && os.Getenv("IS_DOCKER") == "TRUE" {
+		postgresCfg.Host = services.AppViper.GetString("POSTGRES_INTERNAL_HOST")
+	}
 
 	if client, err := db.CreateConnection(&postgresCfg, ctx); err != nil {
 		logger.Fatal("Failed to connect to postgres: %v", err)

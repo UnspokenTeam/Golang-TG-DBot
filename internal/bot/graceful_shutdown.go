@@ -52,7 +52,7 @@ func runComponentsWithGracefulShutdown(
 
 	addComponent(func() { workers.GracefulShutdownLoggerBridge(ctx) })
 	addComponent(func() {
-		defer postgresClient.Close()
+		defer postgresClient.Close(ctx)
 		<-ctx.Done()
 	})
 	if utils.IsEnvProduction() {

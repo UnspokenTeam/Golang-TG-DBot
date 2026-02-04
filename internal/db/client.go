@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
@@ -13,8 +14,9 @@ type Client struct {
 	Queries        *querier.Queries
 }
 
-func (dbClient *Client) Close() {
+func (dbClient *Client) Close(ctx context.Context) {
 	dbClient.connectionPool.Close()
+	slog.InfoContext(ctx, "Postgres has been shut down successfully.")
 }
 
 func CreateConnection(cfg *configs.PostgresConfig, ctx context.Context) (*Client, error) {

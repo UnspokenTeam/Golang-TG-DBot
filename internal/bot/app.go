@@ -9,9 +9,9 @@ import (
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
-	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
 	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
+	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
@@ -22,7 +22,7 @@ var (
 )
 
 func initBotInstance(ctx context.Context, token string) *telego.Bot {
-	bot, err := telego.NewBot(
+	if bot, err := telego.NewBot(
 		token,
 		telego.WithAPICaller(
 			&ta.RetryCaller{
@@ -34,14 +34,13 @@ func initBotInstance(ctx context.Context, token string) *telego.Bot {
 			}),
 		telego.WithHealthCheck(ctx),
 		telego.WithLogger(services.TelegoLogger),
-	)
-	if err != nil {
-		slog.ErrorContext(ctx, fmt.Sprintf("Error while creating bot instance: %v", err))
-		channels.ShutdownChannel <- struct{}{}
+	); err != nil {
+		logger.Fatal(fmt.Sprintf("Error while creating bot instance: %v", err))
+	} else {
+		utils.InitUtils(bot)
+		return bot
 	}
-	utils.InitUtils(bot)
-
-	return bot
+	return nil
 }
 
 func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
@@ -61,8 +60,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	case utils.DEVELOPMENT:
 		var channelErr error
 		bot = initBotInstance(ctx, services.AppViper.GetString("DEV_TOKEN"))
-		updatesCh, channelErr = bot.UpdatesViaLongPolling(ctx, nil)
-		if channelErr != nil {
+		if updatesCh, channelErr = bot.UpdatesViaLongPolling(ctx, nil); channelErr != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("Channel error: %v", channelErr))
 		}
 
@@ -73,46 +71,45 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 		webhookPath := "/" + bot.Token()
 		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
 
-		info, getWebhookInfoErr := bot.GetWebhookInfo(ctx)
-		if getWebhookInfoErr != nil {
+		var (
+			info              *telego.WebhookInfo
+			getWebhookInfoErr error
+		)
+
+		if info, getWebhookInfoErr = bot.GetWebhookInfo(ctx); getWebhookInfoErr != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("Get webhook info error: %v", getWebhookInfoErr), "info", info)
 		}
 
 		if info.URL != webhookURL {
-			var err error
-			setWebhookErr := bot.SetWebhook(ctx, &telego.SetWebhookParams{
+			if setWebhookErr := bot.SetWebhook(ctx, &telego.SetWebhookParams{
 				URL:         webhookURL,
 				SecretToken: bot.SecretToken(),
-			})
-			if setWebhookErr != nil {
+			}); setWebhookErr != nil {
 				slog.ErrorContext(ctx, fmt.Sprintf("Set webhook error: %v", setWebhookErr))
 			}
 
-			info, err = bot.GetWebhookInfo(ctx)
-			if err != nil {
-				slog.ErrorContext(ctx, fmt.Sprintf("Get final webhook error: %v", err), "info", info)
+			if info, getWebhookInfoErr = bot.GetWebhookInfo(ctx); getWebhookInfoErr != nil {
+				slog.ErrorContext(ctx, fmt.Sprintf("Get final webhook error: %v", getWebhookInfoErr), "info", info)
 			}
 		}
 		slog.InfoContext(ctx, fmt.Sprintf("Webhook Info: %+v\n", info))
 
 		var channelErr error
-		updatesCh, channelErr = bot.UpdatesViaWebhook(
+		if updatesCh, channelErr = bot.UpdatesViaWebhook(
 			ctx,
 			telego.WebhookFastHTTP(srv, webhookPath, bot.SecretToken()),
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
-		)
-		if channelErr != nil {
+		); channelErr != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("Channel error: %v", channelErr))
 		}
 
 	default:
-		slog.ErrorContext(ctx, fmt.Sprintf("Unknown env GO_ENV=%s", utils.GetEnv()))
-		channels.ShutdownChannel <- struct{}{}
+		logger.Fatal(fmt.Sprintf("Unknown env GO_ENV=%s", utils.GetEnv()))
 	}
 
 	handler, handlerErr := th.NewBotHandler(bot, updatesCh)
 	if handlerErr != nil {
-		slog.ErrorContext(ctx, fmt.Sprintf("Handler creating error: %v", handlerErr))
+		logger.Fatal(fmt.Sprintf("Handler creating error: %v", handlerErr))
 	}
 	filterWrapper := middlewares.UserFilterWrapper(services)
 	handler.Use(filterWrapper)

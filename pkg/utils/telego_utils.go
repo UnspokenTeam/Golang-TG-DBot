@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -199,4 +200,14 @@ func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 func IsMessageChatCommand(msg *telego.Message) bool {
 	return !(msg == nil || msg.Chat.Type == telego.ChatTypeChannel || msg.Text == "" ||
 		msg.Text[0] != '/' || msg.IsAutomaticForward || (msg.From != nil && msg.From.IsBot))
+}
+
+func GetChatMemberCount(ctx context.Context, chatId int64) int {
+	count, err := utilsBotInstance.GetChatMemberCount(ctx, &telego.GetChatMemberCountParams{
+		ChatID: tu.ID(chatId)})
+	if err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("GetChatMemberCount error: %s", err), "chat_id", chatId)
+		return 1
+	}
+	return *count
 }

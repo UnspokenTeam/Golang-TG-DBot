@@ -9,37 +9,53 @@ import (
 	"context"
 )
 
-const getAllUsers = `-- name: GetAllUsers :many
-SELECT
-    users.id, users.tg_id, users.user_tag, users.user_name, users.user_lastname, users.user_role, users.created_at, users.updated_at
-FROM users
+const getUserByTgId = `-- name: GetUserByTgId :one
+SELECT id, tg_id, user_tag, user_name, user_lastname, user_role, created_at, updated_at
+FROM users u
+WHERE u.tg_id = $1
 `
 
-func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.Query(ctx, getAllUsers)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []User{}
-	for rows.Next() {
-		var i User
-		if err := rows.Scan(
-			&i.ID,
-			&i.TgID,
-			&i.UserTag,
-			&i.UserName,
-			&i.UserLastname,
-			&i.UserRole,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetUserByTgId(ctx context.Context, tgID int64) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByTgId, tgID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.TgID,
+		&i.UserTag,
+		&i.UserName,
+		&i.UserLastname,
+		&i.UserRole,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const initChatUserData = `-- name: InitChatUserData :exec
+SELECT init_chat_user_data($1, $2, $3, $4, $5, $6, $7, $8)
+`
+
+type InitChatUserDataParams struct {
+	PUserTgID     int64
+	PUserTag      string
+	PUserName     string
+	PUserLastname string
+	PChatTgID     int64
+	PChatType     string
+	PChatName     string
+	PMemberCount  int32
+}
+
+func (q *Queries) InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error {
+	_, err := q.db.Exec(ctx, initChatUserData,
+		arg.PUserTgID,
+		arg.PUserTag,
+		arg.PUserName,
+		arg.PUserLastname,
+		arg.PChatTgID,
+		arg.PChatType,
+		arg.PChatName,
+		arg.PMemberCount,
+	)
+	return err
 }

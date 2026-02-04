@@ -1,5 +1,5 @@
 version: '3.9'
-name: tg-dbot-prod
+name: tg-dbot-local
 
 include:
   - 'caddy/docker-compose.caddy.yml'

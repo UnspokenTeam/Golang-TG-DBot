@@ -15,7 +15,7 @@ include:
 services:
   bot-prod:
     image: ${REGISTRY_URL}/${REPO_URL}/${BOT_IMAGE_NAME}:${IMAGE_TAG}
-    container_name: telegram-bot-prod
+    container_name: tg-dbot-telego-prod
     pull_policy: always
     restart: unless-stopped
     ports:

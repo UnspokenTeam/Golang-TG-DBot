@@ -9,7 +9,8 @@ import (
 )
 
 type Querier interface {
-	GetAllUsers(ctx context.Context) ([]User, error)
+	GetUserByTgId(ctx context.Context, tgID int64) (User, error)
+	InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error
 }
 
 var _ Querier = (*Queries)(nil)

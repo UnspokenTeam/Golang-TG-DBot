@@ -29,11 +29,16 @@ func registerHandler(
 
 				ctx, preprocessSpan := services.Tracer.Start(thCtx.Context(), "preprocess_user")
 				defer preprocessSpan.End()
-				hnd.PreprocessUser(ctx, preprocessSpan, update, services)
+				user := hnd.PreprocessUser(ctx, preprocessSpan, update, services)
+				if user == nil {
+					return nil
+				}
 
 				ctx, checkRoleSpan := services.Tracer.Start(ctx, "check_user_role")
 				defer checkRoleSpan.End()
-				hnd.CheckRoleAccess(ctx, checkRoleSpan, roles, services)
+				if !hnd.CheckRoleAccess(ctx, user, roles) {
+					return nil
+				}
 
 				ctx, handlerSpan := services.Tracer.Start(ctx, "handler_span")
 				defer handlerSpan.End()
