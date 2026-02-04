@@ -11,7 +11,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
-	configs "github.com/unspokenteam/golang-tg-dbot/internal/config"
+	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
@@ -52,7 +52,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	)
 
 	servicesInstance := service_wrapper.Services{}
-	services = servicesInstance.Init()
+	services = servicesInstance.Init(appCtx)
 
 	ctx, rootSpan := services.Tracer.Start(appCtx, "Main app span")
 	defer rootSpan.End()
@@ -117,5 +117,5 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	filterWrapper := middlewares.UserFilterWrapper(services)
 	handler.Use(filterWrapper)
 	configureHandlers(ctx, handler)
-	runComponentsWithGracefulShutdown(ctx, cancelFunc, bot, handler, srv)
+	runComponentsWithGracefulShutdown(ctx, cancelFunc, bot, handler, srv, services.PostgresClient)
 }
