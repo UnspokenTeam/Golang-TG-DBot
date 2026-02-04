@@ -123,7 +123,7 @@ func IsGroup(upd telego.Update) bool {
 
 func GetReplyParams(msg *telego.Message) *telego.ReplyParameters {
 	var msgId int
-	if msg.ReplyToMessage != nil && msg.ReplyToMessage.SenderChat.Type == telego.ChatTypeChannel {
+	if msg.ReplyToMessage != nil && msg.ReplyToMessage.SenderChat != nil && msg.ReplyToMessage.SenderChat.Type == telego.ChatTypeChannel {
 		msgId = msg.ReplyToMessage.MessageID
 	}
 	return &telego.ReplyParameters{

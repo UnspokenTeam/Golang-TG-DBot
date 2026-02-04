@@ -59,3 +59,19 @@ func (q *Queries) InitChatUserData(ctx context.Context, arg InitChatUserDataPara
 	)
 	return err
 }
+
+const setUserRoleByTgId = `-- name: SetUserRoleByTgId :exec
+UPDATE users u
+SET user_role = $1
+WHERE u.tg_id = $2
+`
+
+type SetUserRoleByTgIdParams struct {
+	UserRole string
+	TgID     int64
+}
+
+func (q *Queries) SetUserRoleByTgId(ctx context.Context, arg SetUserRoleByTgIdParams) error {
+	_, err := q.db.Exec(ctx, setUserRoleByTgId, arg.UserRole, arg.TgID)
+	return err
+}
