@@ -9,6 +9,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/workers"
+	"github.com/unspokenteam/golang-tg-dbot/internal/db"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
@@ -43,12 +44,17 @@ func runComponentsWithGracefulShutdown(
 	bot *telego.Bot,
 	handler *th.BotHandler,
 	srv *fasthttp.Server,
+	postgresClient *db.Client,
 ) {
 	channels.InitChannels()
 
 	go panicListener(cancel)
 
-	addComponent(func() { workers.GracefulShutdownLogger(ctx) })
+	addComponent(func() { workers.GracefulShutdownLoggerBridge(ctx) })
+	addComponent(func() {
+		defer postgresClient.Close(ctx)
+		<-ctx.Done()
+	})
 	if utils.IsEnvProduction() {
 		port := services.AppViper.GetInt("WEBHOOK_PORT")
 		addComponent(func() { workers.StartServer(ctx, srv, port) })

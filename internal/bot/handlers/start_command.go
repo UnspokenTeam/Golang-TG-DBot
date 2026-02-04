@@ -2,9 +2,7 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"log/slog"
 
 	"github.com/mymmrac/telego"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
@@ -13,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-func Start(ctx context.Context, span trace.Span, upd telego.Update, _ *service_wrapper.Services) {
+func Start(ctx context.Context, _ trace.Span, upd telego.Update, _ *service_wrapper.Services) {
 	text := fmt.Sprintf(
 		"Привет, %s!\n\nДля продолжения взаимодействия с ботом используй команду /help.",
 		hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID),
@@ -25,7 +23,5 @@ func Start(ctx context.Context, span trace.Span, upd telego.Update, _ *service_w
 			hndUtils.GetSendInviteLink("НАЖМИ, ЧТОБЫ ОТПРАВИТЬ БОТА АДМИНУ ГРУППЫ", "НАЖМИ, ЧТОБЫ ДОБАВИТЬ БОТА В ГРУППУ"),
 		)
 	}
-	slog.InfoContext(ctx, "Handler")
-	span.RecordError(errors.New("хер"))
 	workers.EnqueueMessage(ctx, text, upd.Message)
 }

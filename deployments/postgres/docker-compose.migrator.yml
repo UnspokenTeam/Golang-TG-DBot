@@ -7,7 +7,7 @@ services:
     volumes:
       - ../../internal/db/migrations:/db/migrations:ro
     environment:
-      DATABASE_URL: "postgres://${POSTGRES_PGUSER}:${POSTGRES_PGPASS}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_PGDB}?sslmode=disable"
+      DATABASE_URL: "postgres://${POSTGRES_PGUSER}:${POSTGRES_PGPASS}@${POSTGRES_INTERNAL_HOST}:${POSTGRES_PORT}/${POSTGRES_PGDB}?sslmode=disable"
     depends_on:
       postgres-db:
         condition: service_healthy

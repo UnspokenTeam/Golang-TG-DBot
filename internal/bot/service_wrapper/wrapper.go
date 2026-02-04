@@ -1,12 +1,16 @@
 package service_wrapper
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"strings"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
+	"github.com/unspokenteam/golang-tg-dbot/internal/db"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"go.opentelemetry.io/otel"
@@ -19,10 +23,11 @@ type Services struct {
 	CommandsViper  *viper.Viper
 	RateLimitCache *redis.Client
 	TelegoLogger   *logger.TelegoLogger
+	PostgresClient *db.Client
 	Tracer         trace.Tracer
 }
 
-func (services *Services) Init() *Services {
+func (services *Services) Init(ctx context.Context) *Services {
 	services.Tracer = otel.Tracer("my-bot")
 	services.TelegoLogger = logger.SetupLogger("GoLang TG D-Bot")
 
@@ -62,6 +67,17 @@ func (services *Services) Init() *Services {
 			services.AppViper.GetInt("REDIS_PORT")),
 		DB: 0,
 	})
+
+	postgresCfg := configs.LoadConfig(services.AppViper, configs.PostgresConfig{})
+	if utils.IsEnvDevelopment() && os.Getenv("IS_DOCKER") == "TRUE" {
+		postgresCfg.Host = services.AppViper.GetString("POSTGRES_INTERNAL_HOST")
+	}
+
+	if client, err := db.CreateConnection(&postgresCfg, ctx); err != nil {
+		logger.Fatal("Failed to connect to postgres: %v", err)
+	} else {
+		services.PostgresClient = client
+	}
 
 	slog.Info("Services configured")
 	return services
