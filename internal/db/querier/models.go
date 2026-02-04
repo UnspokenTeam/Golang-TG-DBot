@@ -13,8 +13,8 @@ import (
 type Action struct {
 	ID         int64
 	IsYourself bool
-	ChatID     int64
-	UserID     int64
+	ChatTgID   int64
+	UserTgID   int64
 	Action     string
 	CreatedAt  time.Time
 }

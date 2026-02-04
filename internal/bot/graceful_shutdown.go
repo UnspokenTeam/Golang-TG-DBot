@@ -46,8 +46,6 @@ func runComponentsWithGracefulShutdown(
 	srv *fasthttp.Server,
 	postgresClient *db.Client,
 ) {
-	channels.InitChannels()
-
 	go panicListener(cancel)
 
 	addComponent(func() { workers.GracefulShutdownLoggerBridge(ctx) })

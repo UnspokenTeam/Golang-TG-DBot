@@ -9,8 +9,11 @@ import (
 )
 
 type Querier interface {
+	GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error)
+	GetAllTimeStats(ctx context.Context) (GetAllTimeStatsRow, error)
 	GetUserByTgId(ctx context.Context, tgID int64) (User, error)
 	InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error
+	SetUserRoleByTgId(ctx context.Context, arg SetUserRoleByTgIdParams) error
 }
 
 var _ Querier = (*Queries)(nil)

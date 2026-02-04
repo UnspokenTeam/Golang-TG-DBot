@@ -12,14 +12,13 @@ import (
 	hnd "github.com/unspokenteam/golang-tg-dbot/internal/bot/handlers"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
-	"go.opentelemetry.io/otel/trace"
 )
 
 func registerHandler(
 	appCtx context.Context,
 	handler *th.BotHandler,
 	command []string,
-	handleFunc func(context.Context, trace.Span, telego.Update, *service_wrapper.Services),
+	handleFunc func(context.Context, telego.Update, *service_wrapper.Services),
 	roles []roles.Role,
 ) {
 	for _, commandBind := range command {
@@ -29,7 +28,7 @@ func registerHandler(
 
 				ctx, preprocessSpan := services.Tracer.Start(thCtx.Context(), "preprocess_user")
 				defer preprocessSpan.End()
-				user := hnd.PreprocessUser(ctx, preprocessSpan, update, services)
+				user := hnd.PreprocessUser(ctx, update, services)
 				if user == nil {
 					return nil
 				}
@@ -42,7 +41,7 @@ func registerHandler(
 
 				ctx, handlerSpan := services.Tracer.Start(ctx, "handler_span")
 				defer handlerSpan.End()
-				handleFunc(ctx, handlerSpan, update, services)
+				handleFunc(ctx, update, services)
 
 				return nil
 			},
@@ -75,5 +74,37 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 		services.CommandsViper.GetStringSlice("help_commands"),
 		hnd.Help,
 		[]roles.Role{roles.USER, roles.ADMIN, roles.OWNER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		services.CommandsViper.GetStringSlice("user_stats_commands"),
+		hnd.PublicStats,
+		[]roles.Role{roles.USER, roles.ADMIN, roles.OWNER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		[]string{"promote"},
+		hnd.Promote,
+		[]roles.Role{roles.OWNER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		[]string{"demote"},
+		hnd.Demote,
+		[]roles.Role{roles.OWNER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		[]string{"admin_stats"},
+		hnd.PrivateStats,
+		[]roles.Role{roles.OWNER, roles.ADMIN},
 	)
 }

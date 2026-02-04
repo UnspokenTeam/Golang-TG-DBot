@@ -9,6 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
+	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
 	"github.com/unspokenteam/golang-tg-dbot/internal/db"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
@@ -18,7 +19,6 @@ import (
 )
 
 type Services struct {
-	// db queries
 	AppViper       *viper.Viper
 	CommandsViper  *viper.Viper
 	RateLimitCache *redis.Client
@@ -28,6 +28,7 @@ type Services struct {
 }
 
 func (services *Services) Init(ctx context.Context) *Services {
+	channels.InitChannels()
 	services.Tracer = otel.Tracer("my-bot")
 	services.TelegoLogger = logger.SetupLogger("GoLang TG D-Bot")
 

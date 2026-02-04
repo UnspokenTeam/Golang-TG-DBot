@@ -105,6 +105,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 
 	default:
 		logger.Fatal(fmt.Sprintf("Unknown env GO_ENV=%s", utils.GetEnv()))
+		return
 	}
 
 	handler, handlerErr := th.NewBotHandler(bot, updatesCh)

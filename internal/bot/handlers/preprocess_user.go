@@ -9,13 +9,12 @@ import (
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
 	"github.com/unspokenteam/golang-tg-dbot/internal/db/querier"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
 )
 
-func PreprocessUser(ctx context.Context, span trace.Span, upd telego.Update, services *service_wrapper.Services) *querier.User {
+func PreprocessUser(ctx context.Context, upd telego.Update, services *service_wrapper.Services) *querier.User {
 	memberCount := utils.GetChatMemberCount(ctx, upd.Message.Chat.ID)
-	err := services.PostgresClient.Queries.InitChatUserData(
+
+	if err := services.PostgresClient.Queries.InitChatUserData(
 		ctx,
 		querier.InitChatUserDataParams{
 			PUserTgID:     upd.Message.From.ID,
@@ -26,15 +25,12 @@ func PreprocessUser(ctx context.Context, span trace.Span, upd telego.Update, ser
 			PChatType:     upd.Message.Chat.Type,
 			PChatName:     upd.Message.Chat.FirstName,
 			PMemberCount:  int32(memberCount),
-		})
-	if err != nil {
-		span.RecordError(fmt.Errorf("user preprocess error: %v", err))
-		span.SetStatus(codes.Error, err.Error())
+		}); err != nil {
+		slog.ErrorContext(ctx, fmt.Sprintf("user preprocess error: %v", err))
 		return nil
 	}
 	if user, findErr := services.PostgresClient.Queries.GetUserByTgId(ctx, upd.Message.From.ID); findErr != nil {
-		span.RecordError(fmt.Errorf("user find error: %v", findErr))
-		span.SetStatus(codes.Error, findErr.Error())
+		slog.ErrorContext(ctx, fmt.Sprintf("user find error: %v", findErr))
 		return nil
 	} else {
 		slog.InfoContext(ctx, "User preprocessed...")
