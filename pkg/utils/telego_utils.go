@@ -118,10 +118,16 @@ func InitUtils(bot *telego.Bot) {
 }
 
 func IsGroup(upd telego.Update) bool {
+	if upd.Message == nil || upd.Message.From == nil {
+		return false
+	}
 	return upd.Message.From.ID != upd.Message.Chat.ID
 }
 
 func GetReplyParams(msg *telego.Message) *telego.ReplyParameters {
+	if msg == nil {
+		return nil
+	}
 	var msgId int
 	if msg.ReplyToMessage != nil && msg.ReplyToMessage.SenderChat != nil && msg.ReplyToMessage.SenderChat.Type == telego.ChatTypeChannel {
 		msgId = msg.ReplyToMessage.MessageID
@@ -205,7 +211,7 @@ func IsMessageChatCommand(msg *telego.Message) bool {
 func GetChatMemberCount(ctx context.Context, chatId int64) int {
 	count, err := utilsBotInstance.GetChatMemberCount(ctx, &telego.GetChatMemberCountParams{
 		ChatID: tu.ID(chatId)})
-	if err != nil {
+	if err != nil || count == nil {
 		slog.ErrorContext(ctx, fmt.Sprintf("GetChatMemberCount error: %s", err), "chat_id", chatId)
 		return 1
 	}

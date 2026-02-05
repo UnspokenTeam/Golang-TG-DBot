@@ -1,5 +1,5 @@
 api.{$DOMAIN} {
-    reverse_proxy telegram-bot-prod:8080 {
+    reverse_proxy tg-dbot-telego-prod:8080 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
