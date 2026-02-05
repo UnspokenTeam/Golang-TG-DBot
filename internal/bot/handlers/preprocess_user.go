@@ -14,6 +14,23 @@ import (
 func PreprocessUser(ctx context.Context, upd telego.Update, services *service_wrapper.Services) *querier.User {
 	memberCount := utils.GetChatMemberCount(ctx, upd.Message.Chat.ID)
 
+	if upd.Message.ReplyToMessage != nil {
+		if err := services.PostgresClient.Queries.InitChatUserData(
+			ctx,
+			querier.InitChatUserDataParams{
+				PUserTgID:     upd.Message.ReplyToMessage.From.ID,
+				PUserTag:      upd.Message.ReplyToMessage.From.Username,
+				PUserName:     upd.Message.ReplyToMessage.From.FirstName,
+				PUserLastname: upd.Message.ReplyToMessage.From.LastName,
+				PChatTgID:     upd.Message.ReplyToMessage.Chat.ID,
+				PChatType:     upd.Message.ReplyToMessage.Chat.Type,
+				PChatName:     upd.Message.ReplyToMessage.Chat.FirstName,
+				PMemberCount:  int32(memberCount),
+			}); err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("reply to user preprocess error: %v", err))
+			return nil
+		}
+	}
 	if err := services.PostgresClient.Queries.InitChatUserData(
 		ctx,
 		querier.InitChatUserDataParams{
