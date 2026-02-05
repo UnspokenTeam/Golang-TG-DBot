@@ -9,8 +9,9 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
-      - ./../../configs/clickhouse/users.xml:/etc/clickhouse-server/users.d/users.xml
-      - ./../../configs/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml
+      - ./../../configs/clickhouse/users.xml:/etc/clickhouse-server/users.d/users.xml:ro
+      - ./../../configs/clickhouse/disable_logs.xml:/etc/clickhouse-server/config.d/z_disable_logs.xml:ro
+      - ./../../configs/clickhouse/config.xml:/etc/clickhouse-server/config.d/config.xml:ro
     environment:
       CLICKHOUSE_DB: otel
       ADMIN_PASSWORD: ${CLICKHOUSE_PASSWORD}

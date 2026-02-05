@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/mymmrac/telego"
@@ -74,10 +75,14 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 		var (
 			info              *telego.WebhookInfo
 			getWebhookInfoErr error
+			replacer          = strings.NewReplacer(
+				services.AppViper.GetString("PROD_TOKEN"), "PROD_TOKEN",
+				services.AppViper.GetString("DEV_TOKEN"), "DEV_TOKEN",
+			)
 		)
 
 		if info, getWebhookInfoErr = bot.GetWebhookInfo(ctx); getWebhookInfoErr != nil {
-			slog.ErrorContext(ctx, fmt.Sprintf("Get webhook info error: %v", getWebhookInfoErr), "info", info)
+			slog.ErrorContext(ctx, replacer.Replace(fmt.Sprintf("Get webhook info error: %v\nInfo:%+v", getWebhookInfoErr, info)))
 		}
 
 		if info.URL != webhookURL {
@@ -89,10 +94,10 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 			}
 
 			if info, getWebhookInfoErr = bot.GetWebhookInfo(ctx); getWebhookInfoErr != nil {
-				slog.ErrorContext(ctx, fmt.Sprintf("Get final webhook error: %v", getWebhookInfoErr), "info", info)
+				slog.ErrorContext(ctx, replacer.Replace(fmt.Sprintf("Get final webhook error: %v\nInfo:%+v", getWebhookInfoErr, info)))
 			}
 		}
-		slog.InfoContext(ctx, fmt.Sprintf("Webhook Info: %+v\n", info))
+		slog.InfoContext(ctx, replacer.Replace(fmt.Sprintf("Webhook Info: %+v\n", info)))
 
 		var channelErr error
 		if updatesCh, channelErr = bot.UpdatesViaWebhook(
