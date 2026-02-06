@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/mymmrac/telego"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
@@ -22,7 +21,6 @@ func Demote(ctx context.Context, upd telego.Update, services *service_wrapper.Se
 		TgID:     upd.Message.ReplyToMessage.From.ID,
 	})
 	if err != nil {
-		slog.ErrorContext(ctx, fmt.Sprintf("Demote user err: %s", err))
 		return
 	}
 	text := fmt.Sprintf("Роль %s успешно понижена до %s",

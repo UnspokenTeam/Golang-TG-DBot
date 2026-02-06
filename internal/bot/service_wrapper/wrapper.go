@@ -6,30 +6,37 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
-	"github.com/unspokenteam/golang-tg-dbot/internal/db"
+	"github.com/unspokenteam/golang-tg-dbot/internal/db/querier"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
+	"golang.org/x/time/rate"
 )
 
 type Services struct {
-	AppViper       *viper.Viper
-	CommandsViper  *viper.Viper
-	RateLimitCache *redis.Client
-	TelegoLogger   *logger.TelegoLogger
-	PostgresClient *db.Client
-	Tracer         trace.Tracer
+	AppViper         *viper.Viper
+	CommandsViper    *viper.Viper
+	RateLimitCache   *redis.Client
+	TelegoLogger     *logger.TelegoLogger
+	PostgresClient   *querier.DbClient
+	TgApiRateLimiter *rate.Limiter
+	ConfigCache      *configs.ConfigCache
+	Tracer           trace.Tracer
+	Meter            metric.Meter
 }
 
 func (services *Services) Init(ctx context.Context) *Services {
 	channels.InitChannels()
-	services.Tracer = otel.Tracer("my-bot")
+	services.Tracer = otel.Tracer("telegram-bot")
+	services.Meter = otel.Meter("telegram-bot")
 	services.TelegoLogger = logger.SetupLogger("GoLang TG D-Bot")
 
 	services.AppViper = viper.New()
@@ -60,6 +67,7 @@ func (services *Services) Init(ctx context.Context) *Services {
 	if err := services.CommandsViper.ReadInConfig(); err != nil {
 		logger.Fatal("Failed to read yaml config: %v", err)
 	}
+	services.ConfigCache = configs.NewConfigCache(services.CommandsViper)
 
 	services.RateLimitCache = redis.NewClient(&redis.Options{
 		Addr: fmt.Sprintf(
@@ -74,11 +82,14 @@ func (services *Services) Init(ctx context.Context) *Services {
 		postgresCfg.Host = services.AppViper.GetString("POSTGRES_INTERNAL_HOST")
 	}
 
-	if client, err := db.CreateConnection(&postgresCfg, ctx); err != nil {
+	if client, err := querier.CreateClient(&postgresCfg, ctx, services.Tracer); err != nil {
 		logger.Fatal("Failed to connect to postgres: %v", err)
 	} else {
 		services.PostgresClient = client
 	}
+
+	services.TgApiRateLimiter = rate.NewLimiter(
+		rate.Every(time.Second/time.Duration(services.AppViper.GetInt("RPS_LIMIT"))), 1)
 
 	slog.Info("Services configured")
 	return services
