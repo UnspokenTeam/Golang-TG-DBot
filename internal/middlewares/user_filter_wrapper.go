@@ -68,7 +68,7 @@ func isUserDeniedByRateLimit(ctx *th.Context, message *telego.Message) bool {
 		case LOUD:
 			tryIncrUserState(ctx.Context(), redisId, userState, time.Duration(cfg.SpamCooldown)*time.Second, message)
 			slog.DebugContext(ctx, fmt.Sprintf("Muting user %d...", message.From.ID), "payload", message)
-			go utils.TryMuteSpammer(ctx, message, cfg.SpamCooldown)
+			go utils.TryMuteSpammer(ctx, message, cfg.SpamCooldown, services.TgApiRateLimiter)
 		default:
 		}
 	}

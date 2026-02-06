@@ -9,7 +9,7 @@ import (
 	th "github.com/mymmrac/telego/telegohandler"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/workers"
-	"github.com/unspokenteam/golang-tg-dbot/internal/db"
+	"github.com/unspokenteam/golang-tg-dbot/internal/db/querier"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/valyala/fasthttp"
@@ -44,7 +44,7 @@ func runComponentsWithGracefulShutdown(
 	bot *telego.Bot,
 	handler *th.BotHandler,
 	srv *fasthttp.Server,
-	postgresClient *db.Client,
+	postgresClient *querier.DbClient,
 ) {
 	go panicListener(cancel)
 
@@ -57,7 +57,7 @@ func runComponentsWithGracefulShutdown(
 		port := services.AppViper.GetInt("WEBHOOK_PORT")
 		addComponent(func() { workers.StartServer(ctx, srv, port) })
 	}
-	addComponent(func() { workers.OpenQueue(ctx, bot, services.AppViper.GetInt("RPS_LIMIT")) })
+	addComponent(func() { workers.OpenQueue(ctx, bot, services.TgApiRateLimiter) })
 	addComponent(func() { workers.RunCommandConsumer(ctx, handler) })
 
 	slog.InfoContext(ctx, "Started app components")

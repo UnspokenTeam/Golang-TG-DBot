@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/mymmrac/telego"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
@@ -17,15 +16,15 @@ func Promote(ctx context.Context, upd telego.Update, services *service_wrapper.S
 	if upd.Message.ReplyToMessage == nil || upd.Message.ReplyToMessage.From.ID == upd.Message.From.ID {
 		return
 	}
+
 	err := services.PostgresClient.Queries.SetUserRoleByTgId(ctx, querier.SetUserRoleByTgIdParams{
 		UserRole: string(roles.ADMIN),
 		TgID:     upd.Message.ReplyToMessage.From.ID,
 	})
-
 	if err != nil {
-		slog.ErrorContext(ctx, fmt.Sprintf("Promote user err: %s", err))
 		return
 	}
+
 	text := fmt.Sprintf("Роль %s успешно повышена до %s",
 		hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID),
 		roles.ADMIN)

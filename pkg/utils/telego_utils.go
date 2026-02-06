@@ -11,6 +11,7 @@ import (
 	"github.com/mymmrac/telego"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
+	"golang.org/x/time/rate"
 )
 
 var utilsBotInstance *telego.Bot
@@ -143,7 +144,15 @@ func GetMsgSendParams(text string, msg *telego.Message) *telego.SendMessageParam
 	return tu.Message(tu.ID(msg.Chat.ID), text).WithReplyParameters(GetReplyParams(msg))
 }
 
-func muteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
+func rateLimitWait(ctx context.Context, limiter *rate.Limiter) {
+	if limiter != nil {
+		if limiterErr := limiter.Wait(ctx); limiterErr != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("Sender rate limiter error: %s", limiterErr))
+		}
+	}
+}
+
+func muteSpammer(ctx *th.Context, message *telego.Message, cooldown int64, limiter *rate.Limiter) {
 	mutePtr := false
 	perms := &telego.ChatPermissions{
 		CanSendMessages:       &mutePtr,
@@ -152,6 +161,7 @@ func muteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 	}
 	until := message.Date + cooldown
 
+	rateLimitWait(ctx, limiter)
 	if err := utilsBotInstance.RestrictChatMember(ctx.Context(), &telego.RestrictChatMemberParams{
 		ChatID:                        message.Chat.ChatID(),
 		UserID:                        message.From.ID,
@@ -163,12 +173,15 @@ func muteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 	}
 }
 
-func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
+func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64, limiter *rate.Limiter) {
+	rateLimitWait(ctx, limiter)
 	me, err := utilsBotInstance.GetMe(ctx)
 	if err != nil {
 		slog.ErrorContext(ctx, fmt.Sprintf("Cannot get bot instance: %s", err), "payload", message)
 		return
 	}
+
+	rateLimitWait(ctx, limiter)
 	botChatMember, getBotErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
 		ChatID: tu.ID(message.Chat.ID), UserID: me.ID,
 	})
@@ -185,6 +198,7 @@ func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 		allowed = m.CanRestrictMembers
 	}
 
+	rateLimitWait(ctx, limiter)
 	memberToMute, memberGetErr := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
 		ChatID: tu.ID(message.Chat.ID), UserID: message.From.ID,
 	})
@@ -199,7 +213,7 @@ func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64) {
 		return
 	}
 	if allowed {
-		muteSpammer(ctx, message, cooldown)
+		muteSpammer(ctx, message, cooldown, limiter)
 	}
 }
 
@@ -208,7 +222,8 @@ func IsMessageChatCommand(msg *telego.Message) bool {
 		msg.Text[0] != '/' || msg.IsAutomaticForward || (msg.From != nil && msg.From.IsBot))
 }
 
-func GetChatMemberCount(ctx context.Context, chatId int64) int {
+func GetChatMemberCount(ctx context.Context, chatId int64, limiter *rate.Limiter) int {
+	rateLimitWait(ctx, limiter)
 	count, err := utilsBotInstance.GetChatMemberCount(ctx, &telego.GetChatMemberCountParams{
 		ChatID: tu.ID(chatId)})
 	if err != nil || count == nil {
@@ -216,4 +231,12 @@ func GetChatMemberCount(ctx context.Context, chatId int64) int {
 		return 1
 	}
 	return *count
+}
+
+func GetFormattedLink(header, url string) string {
+	return fmt.Sprintf("[%s](%s)", header, url)
+}
+
+func GetChatLink(header, chatName string) string {
+	return fmt.Sprintf("[%s](tg://resolve?domain=%s)", header, chatName)
 }

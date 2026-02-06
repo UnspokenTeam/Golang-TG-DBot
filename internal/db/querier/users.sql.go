@@ -7,6 +7,8 @@ package querier
 
 import (
 	"context"
+
+	decimal "github.com/shopspring/decimal"
 )
 
 const getUserByTgId = `-- name: GetUserByTgId :one
@@ -27,6 +29,51 @@ func (q *Queries) GetUserByTgId(ctx context.Context, tgID int64) (User, error) {
 		&i.UserRole,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserStatsByTgId = `-- name: GetUserStatsByTgId :one
+SELECT
+    u.user_name,
+    c.name,
+    cu.d_length,
+    cu.m_action_count,
+    cu.f_action_count,
+    cu.s_action_count,
+    cu.loses
+FROM chat_users cu
+JOIN chats c on cu.chat_tg_id = c.tg_id
+JOIN users u on cu.user_tg_id = u.tg_id
+WHERE cu.chat_tg_id = $1 AND cu.user_tg_id = $2
+`
+
+type GetUserStatsByTgIdParams struct {
+	ChatTgID int64
+	UserTgID int64
+}
+
+type GetUserStatsByTgIdRow struct {
+	UserName     string
+	Name         string
+	DLength      decimal.Decimal
+	MActionCount int32
+	FActionCount int32
+	SActionCount int32
+	Loses        int32
+}
+
+func (q *Queries) GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgIdParams) (GetUserStatsByTgIdRow, error) {
+	row := q.db.QueryRow(ctx, getUserStatsByTgId, arg.ChatTgID, arg.UserTgID)
+	var i GetUserStatsByTgIdRow
+	err := row.Scan(
+		&i.UserName,
+		&i.Name,
+		&i.DLength,
+		&i.MActionCount,
+		&i.FActionCount,
+		&i.SActionCount,
+		&i.Loses,
 	)
 	return i, err
 }

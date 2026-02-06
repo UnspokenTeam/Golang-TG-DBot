@@ -6,12 +6,19 @@ package querier
 
 import (
 	"context"
+	"time"
+
+	decimal "github.com/shopspring/decimal"
 )
 
 type Querier interface {
 	GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error)
 	GetAllTimeStats(ctx context.Context) (GetAllTimeStatsRow, error)
+	GetLastTimeDAction(ctx context.Context, arg GetLastTimeDActionParams) (*time.Time, error)
+	GetRandomActionFromNewest(ctx context.Context) (GetRandomActionFromNewestRow, error)
 	GetUserByTgId(ctx context.Context, tgID int64) (User, error)
+	GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgIdParams) (GetUserStatsByTgIdRow, error)
+	GrowD(ctx context.Context, arg GrowDParams) (decimal.Decimal, error)
 	InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error
 	SetUserRoleByTgId(ctx context.Context, arg SetUserRoleByTgIdParams) error
 }

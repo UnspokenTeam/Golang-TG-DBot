@@ -7,7 +7,7 @@ package querier
 import (
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	decimal "github.com/shopspring/decimal"
 )
 
 type Action struct {
@@ -40,7 +40,7 @@ type ChatUser struct {
 	LastMessageAt            time.Time
 	MActionCount             int32
 	LastMAt                  *time.Time
-	DLength                  pgtype.Numeric
+	DLength                  decimal.Decimal
 	LastGrowAt               *time.Time
 	FActionCount             int32
 	LastFAt                  *time.Time
