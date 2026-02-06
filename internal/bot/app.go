@@ -15,6 +15,7 @@ import (
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/internal/middlewares"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
+	"github.com/uptrace/uptrace-go/uptrace"
 	"github.com/valyala/fasthttp"
 )
 
@@ -111,6 +112,9 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	default:
 		logger.Fatal(fmt.Sprintf("Unknown env GO_ENV=%s", utils.GetEnv()))
 		services.PostgresClient.Close(ctx)
+		if err := uptrace.Shutdown(ctx); err != nil {
+			slog.ErrorContext(ctx, fmt.Sprintf("Error in uptrace shutdown: %v", err))
+		}
 		return
 	}
 

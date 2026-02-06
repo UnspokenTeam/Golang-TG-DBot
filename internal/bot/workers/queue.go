@@ -10,6 +10,7 @@ import (
 
 	"github.com/mymmrac/telego"
 	"github.com/mymmrac/telego/telegoapi"
+	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	hndUtils "github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"golang.org/x/time/rate"
@@ -38,6 +39,31 @@ func consumeMessages() {
 			}
 			if !tryToSendWithRetry(msg) {
 				slog.ErrorContext(msg.UpdCtx, "Failed to send message after 3 retries", "send_params", msg.Msg)
+			}
+		}
+	}
+}
+
+func EnqueueBroadcast(updCtx context.Context, text string, chatId int64) {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	attempts := 0
+	for {
+		select {
+		case <-ctx.Done():
+			slog.DebugContext(updCtx, "Queue closed, broadcast message wasn't sent.", "message", text)
+			return
+
+		case channels.SenderChannel <- channels.Message{UpdCtx: updCtx, Msg: tu.Message(tu.ID(chatId), text)}:
+			attempts++
+			slog.InfoContext(updCtx, fmt.Sprintf("Broadcast message has been sent to queue after %d retries", attempts))
+			return
+
+		case <-ticker.C:
+			attempts++
+			if attempts%10 == 0 {
+				slog.DebugContext(updCtx, fmt.Sprintf("Trying to send broadcast message to queue, attempt %d", attempts))
 			}
 		}
 	}
@@ -105,11 +131,10 @@ func gracefulShutdownQueue() {
 	}
 }
 
-func OpenQueue(appCtx context.Context, bot *telego.Bot, rpsLimit int) {
+func OpenQueue(appCtx context.Context, bot *telego.Bot, rateLimiter *rate.Limiter) {
 	ctx = appCtx
 	botInstance = bot
-
-	limiter = rate.NewLimiter(rate.Every(time.Second/time.Duration(rpsLimit)), 1)
+	limiter = rateLimiter
 
 	defer gracefulShutdownQueue()
 	wg.Go(consumeMessages)
