@@ -14,7 +14,7 @@ import (
 func PreprocessUser(ctx context.Context, upd telego.Update, services *service_wrapper.Services) *querier.User {
 	memberCount := utils.GetChatMemberCount(ctx, upd.Message.Chat.ID, services.TgApiRateLimiter)
 
-	if upd.Message.ReplyToMessage != nil && utils.IsMessageChatCommand(upd.Message.ReplyToMessage) {
+	if upd.Message.ReplyToMessage != nil && utils.IsValidUser(upd.Message.ReplyToMessage) {
 		var chatName string
 		if len(upd.Message.Chat.Title) == 0 {
 			chatName = upd.Message.Chat.FirstName

@@ -48,6 +48,79 @@ func escapePreBlock(code string) string {
 	return "```\n" + code + "\n```"
 }
 
+func parseAndReplaceLinks(input string, makePlaceholder func(string) string) string {
+	var result strings.Builder
+	i := 0
+
+	for i < len(input) {
+		if input[i] == '[' {
+			textStart := i + 1
+			textEnd := findClosingBracket(input, i)
+
+			if textEnd != -1 && textEnd+1 < len(input) && input[textEnd+1] == '(' {
+				urlStart := textEnd + 2
+				urlEnd := findBalancedClosingParen(input, textEnd+1)
+
+				if urlEnd != -1 {
+					text := input[textStart:textEnd]
+					url := input[urlStart:urlEnd]
+
+					escapedText := escapeMarkdownV2Base(text)
+					escapedURL := escapeURL(url)
+					replacement := "[" + escapedText + "](" + escapedURL + ")"
+
+					result.WriteString(makePlaceholder(replacement))
+					i = urlEnd + 1
+					continue
+				}
+			}
+		}
+
+		result.WriteByte(input[i])
+		i++
+	}
+
+	return result.String()
+}
+
+func findClosingBracket(s string, start int) int {
+	for i := start + 1; i < len(s); i++ {
+		if s[i] == '\\' {
+			i++
+			continue
+		}
+		if s[i] == ']' {
+			return i
+		}
+	}
+	return -1
+}
+
+func findBalancedClosingParen(s string, start int) int {
+	if s[start] != '(' {
+		return -1
+	}
+
+	depth := 0
+	for i := start; i < len(s); i++ {
+		if s[i] == '\\' {
+			i++
+			continue
+		}
+
+		if s[i] == '(' {
+			depth++
+		} else if s[i] == ')' {
+			depth--
+			if depth == 0 {
+				return i
+			}
+		}
+	}
+
+	return -1
+}
+
 func escapeURL(url string) string {
 	url = strings.ReplaceAll(url, `\`, `\\`)
 	url = strings.ReplaceAll(url, ")", "\\)")
@@ -77,13 +150,7 @@ func EscapeMarkdownV2Smart(input string) string {
 		return makePlaceholder(escapeInlineCode(content))
 	})
 
-	reLinks := regexp.MustCompile(`\[((?:\\.|[^\[\]\\])+)\]\(((?:\\.|[^()\s])+)\)`)
-	input = reLinks.ReplaceAllStringFunc(input, func(match string) string {
-		matches := reLinks.FindStringSubmatch(match)
-		escapedText := escapeMarkdownV2Base(matches[1])
-		escapedURL := escapeURL(matches[2])
-		return makePlaceholder("[" + escapedText + "](" + escapedURL + ")")
-	})
+	input = parseAndReplaceLinks(input, makePlaceholder)
 
 	input = escapeMarkdownV2Base(input)
 	for _, ph := range placeholders {
@@ -141,7 +208,9 @@ func GetReplyParams(msg *telego.Message) *telego.ReplyParameters {
 }
 
 func GetMsgSendParams(text string, msg *telego.Message) *telego.SendMessageParams {
-	return tu.Message(tu.ID(msg.Chat.ID), text).WithReplyParameters(GetReplyParams(msg))
+	return tu.Message(tu.ID(msg.Chat.ID), text).
+		WithReplyParameters(GetReplyParams(msg)).
+		WithMessageThreadID(msg.MessageThreadID)
 }
 
 func rateLimitWait(ctx context.Context, limiter *rate.Limiter) {
@@ -215,6 +284,11 @@ func TryMuteSpammer(ctx *th.Context, message *telego.Message, cooldown int64, li
 	if allowed {
 		muteSpammer(ctx, message, cooldown, limiter)
 	}
+}
+
+func IsValidUser(msg *telego.Message) bool {
+	return !(msg == nil || msg.Chat.Type == telego.ChatTypeChannel || msg.IsAutomaticForward ||
+		(msg.From != nil && msg.From.IsBot))
 }
 
 func IsMessageChatCommand(msg *telego.Message) bool {
