@@ -12,15 +12,25 @@ import (
 )
 
 type Querier interface {
+	ConfirmFAction(ctx context.Context, arg ConfirmFActionParams) error
+	ConfirmSAction(ctx context.Context, arg ConfirmSActionParams) error
 	GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error)
 	GetAllTimeStats(ctx context.Context) (GetAllTimeStatsRow, error)
 	GetLastTimeDAction(ctx context.Context, arg GetLastTimeDActionParams) (*time.Time, error)
-	GetRandomActionFromNewest(ctx context.Context) (GetRandomActionFromNewestRow, error)
+	GetLastTimeFAction(ctx context.Context, arg GetLastTimeFActionParams) (*time.Time, error)
+	GetLastTimeMAction(ctx context.Context, arg GetLastTimeMActionParams) (*time.Time, error)
+	GetLastTimeSAction(ctx context.Context, arg GetLastTimeSActionParams) (*time.Time, error)
+	GetRandomActionForStrangerFromNewest(ctx context.Context) (GetRandomActionForStrangerFromNewestRow, error)
 	GetUserByTgId(ctx context.Context, tgID int64) (User, error)
 	GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgIdParams) (GetUserStatsByTgIdRow, error)
+	GetYourselfRandomActionFromNewest(ctx context.Context) (GetYourselfRandomActionFromNewestRow, error)
 	GrowD(ctx context.Context, arg GrowDParams) (decimal.Decimal, error)
 	InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error
 	SetUserRoleByTgId(ctx context.Context, arg SetUserRoleByTgIdParams) error
+	TryPerformFAction(ctx context.Context, arg TryPerformFActionParams) (int32, error)
+	TryPerformMAction(ctx context.Context, arg TryPerformMActionParams) (int32, error)
+	TryPerformSAction(ctx context.Context, arg TryPerformSActionParams) (int32, error)
+	UpdateLastMessageAt(ctx context.Context, arg UpdateLastMessageAtParams) error
 }
 
 var _ Querier = (*Queries)(nil)

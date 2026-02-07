@@ -51,3 +51,22 @@ func (cc *ConfigCache) GetInt(key string) int {
 	}
 	return 0
 }
+
+func (cc *ConfigCache) GetStringSlice(key string) []string {
+	cache := cc.cache.Load().(map[string]interface{})
+	if v, ok := cache[key]; ok {
+		switch val := v.(type) {
+		case []string:
+			return val
+		case []interface{}:
+			result := make([]string, 0, len(val))
+			for _, item := range val {
+				if str, ok := item.(string); ok {
+					result = append(result, str)
+				}
+			}
+			return result
+		}
+	}
+	return []string{""}
+}

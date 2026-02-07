@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/mymmrac/telego"
 	"github.com/shopspring/decimal"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
@@ -22,9 +23,10 @@ func sendFail(
 	cooldown time.Duration,
 	configCache *configs.ConfigCache,
 	lastTime time.Time,
-	upd telego.Update) {
+	upd telego.Update,
+	formatKey string) {
 	toWait := cooldown - time.Since(lastTime)
-	text := configCache.GetString("up_text_fail_pattern")
+	text := configCache.GetString(formatKey)
 	workers.EnqueueMessage(ctx,
 		fmt.Sprintf(text,
 			hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID),
@@ -36,16 +38,11 @@ func sendFail(
 func Up(ctx context.Context, upd telego.Update, services *service_wrapper.Services) {
 	if !hndUtils.IsGroup(upd) {
 		workers.EnqueueMessage(ctx, "Команда доступна только в группах.", upd.Message)
-	}
-	lastTime, _ := services.PostgresClient.Queries.GetLastTimeDAction(ctx, querier.GetLastTimeDActionParams{
-		ChatTgID: upd.Message.Chat.ID,
-		UserTgID: upd.Message.From.ID,
-	})
-	cooldown := time.Duration(services.ConfigCache.GetInt("up_command_cooldown")) * time.Minute
-	if lastTime != nil && time.Since(*lastTime) < cooldown {
-		sendFail(ctx, cooldown, services.ConfigCache, *lastTime, upd)
 		return
 	}
+
+	cooldown := time.Duration(services.ConfigCache.GetInt("up_command_cooldown")) * time.Minute
+
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	x := rng.Intn(101) // 0..100
 
@@ -59,14 +56,18 @@ func Up(ctx context.Context, upd telego.Update, services *service_wrapper.Servic
 		DLength:  incr,
 		ChatTgID: upd.Message.Chat.ID,
 		UserTgID: upd.Message.From.ID,
+		Cooldown: pgtype.Interval{
+			Microseconds: cooldown.Microseconds(),
+			Valid:        true,
+		},
 	})
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		lastTime, _ = services.PostgresClient.Queries.GetLastTimeDAction(ctx, querier.GetLastTimeDActionParams{
+		lastTime, _ := services.PostgresClient.Queries.GetLastTimeDAction(ctx, querier.GetLastTimeDActionParams{
 			ChatTgID: upd.Message.Chat.ID,
 			UserTgID: upd.Message.From.ID,
 		})
-		sendFail(ctx, cooldown, services.ConfigCache, *lastTime, upd)
+		sendFail(ctx, cooldown, services.ConfigCache, *lastTime, upd, "up_text_fail_pattern")
 	}
 	if err != nil {
 		return

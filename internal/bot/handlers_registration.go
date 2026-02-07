@@ -60,6 +60,9 @@ func registerHandler(
 				ctx, handlerSpan := services.Tracer.Start(ctx, "handler_span")
 				handlerSpan.SetAttributes(
 					attribute.String("command", funcDisplayName),
+					attribute.Int64("user_id", update.Message.From.ID),
+					attribute.Int64("chat_id", update.Message.Chat.ID),
+					attribute.String("msg", fmt.Sprintf("%+v", update.Message)),
 				)
 				defer handlerSpan.End()
 				handleFunc(ctx, update, services)
@@ -147,5 +150,53 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 		services.CommandsViper.GetStringSlice("up_commands"),
 		hnd.Up,
 		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		[]string{"analyze"},
+		hnd.Analyze,
+		[]roles.Role{roles.OWNER, roles.ADMIN},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		services.CommandsViper.GetStringSlice("s_commands"),
+		hnd.SAction,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		services.CommandsViper.GetStringSlice("random_action_commands"),
+		hnd.Random,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		services.CommandsViper.GetStringSlice("m_commands"),
+		hnd.MAction,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		services.CommandsViper.GetStringSlice("f_commands"),
+		hnd.FAction,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
+
+	registerHandler(
+		ctx,
+		handler,
+		[]string{"echo"},
+		hnd.Echo,
+		[]roles.Role{roles.OWNER},
 	)
 }

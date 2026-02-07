@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	decimal "github.com/shopspring/decimal"
 )
 
@@ -37,7 +38,7 @@ SET
     last_grow_at = now()
 WHERE chat_tg_id = $2
   AND user_tg_id = $3
-  AND (last_grow_at IS NULL OR last_grow_at < NOW() - INTERVAL '15 minutes')
+  AND (last_grow_at IS NULL OR last_grow_at < NOW() - $4::interval)
 RETURNING d_length
 `
 
@@ -45,10 +46,16 @@ type GrowDParams struct {
 	DLength  decimal.Decimal
 	ChatTgID int64
 	UserTgID int64
+	Cooldown pgtype.Interval
 }
 
 func (q *Queries) GrowD(ctx context.Context, arg GrowDParams) (decimal.Decimal, error) {
-	row := q.db.QueryRow(ctx, growD, arg.DLength, arg.ChatTgID, arg.UserTgID)
+	row := q.db.QueryRow(ctx, growD,
+		arg.DLength,
+		arg.ChatTgID,
+		arg.UserTgID,
+		arg.Cooldown,
+	)
 	var d_length decimal.Decimal
 	err := row.Scan(&d_length)
 	return d_length, err
