@@ -16,6 +16,8 @@ type Querier interface {
 	ConfirmSAction(ctx context.Context, arg ConfirmSActionParams) error
 	GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error)
 	GetAllTimeStats(ctx context.Context) (GetAllTimeStatsRow, error)
+	GetChatLeaderBoards(ctx context.Context, chatTgID int64) ([]GetChatLeaderBoardsRow, error)
+	GetGlobalLeaderBoards(ctx context.Context) ([]GetGlobalLeaderBoardsRow, error)
 	GetLastTimeDAction(ctx context.Context, arg GetLastTimeDActionParams) (*time.Time, error)
 	GetLastTimeFAction(ctx context.Context, arg GetLastTimeFActionParams) (*time.Time, error)
 	GetLastTimeMAction(ctx context.Context, arg GetLastTimeMActionParams) (*time.Time, error)
