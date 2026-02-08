@@ -152,6 +152,13 @@ func EscapeMarkdownV2Smart(input string) string {
 
 	input = parseAndReplaceLinks(input, makePlaceholder)
 
+	reItalic := regexp.MustCompile(`__(.+?)__`)
+	input = reItalic.ReplaceAllStringFunc(input, func(match string) string {
+		content := reItalic.FindStringSubmatch(match)[1]
+		escapedContent := escapeMarkdownV2Base(content)
+		return makePlaceholder("_" + escapedContent + "_")
+	})
+
 	input = escapeMarkdownV2Base(input)
 	for _, ph := range placeholders {
 		input = strings.ReplaceAll(input, ph.ID, ph.Value)
@@ -313,4 +320,16 @@ func GetFormattedLink(header, url string) string {
 
 func GetChatLink(header, chatName string) string {
 	return fmt.Sprintf("[%s](tg://resolve?domain=%s)", header, chatName)
+}
+
+func GetStrangerName(msg *telego.Message) string {
+	if msg == nil {
+		return ""
+	}
+	if msg.SenderChat != nil {
+		return msg.SenderChat.Title
+	} else if msg.From != nil {
+		return msg.From.FirstName
+	}
+	return ""
 }
