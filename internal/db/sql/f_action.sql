@@ -1,5 +1,5 @@
 -- name: GetLastTimeFAction :one
-SELECT cu.last_s_at
+SELECT cu.last_f_at
 FROM chat_users cu
 WHERE chat_tg_id = $1 AND user_tg_id = $2;
 
@@ -7,10 +7,10 @@ WHERE chat_tg_id = $1 AND user_tg_id = $2;
 UPDATE chat_users
 SET
     f_action_count = f_action_count + 1,
-    last_s_at = now()
+    last_f_at = now()
 WHERE chat_tg_id = $1
   AND user_tg_id = $2
-  AND (last_s_at IS NULL OR last_s_at < NOW() - sqlc.arg(cooldown)::interval)
+  AND (last_f_at IS NULL OR last_f_at < NOW() - sqlc.arg(cooldown)::interval)
 RETURNING f_action_count;
 
 -- name: ConfirmFAction :exec

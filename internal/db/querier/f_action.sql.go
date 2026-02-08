@@ -31,7 +31,7 @@ func (q *Queries) ConfirmFAction(ctx context.Context, arg ConfirmFActionParams) 
 }
 
 const getLastTimeFAction = `-- name: GetLastTimeFAction :one
-SELECT cu.last_s_at
+SELECT cu.last_f_at
 FROM chat_users cu
 WHERE chat_tg_id = $1 AND user_tg_id = $2
 `
@@ -43,19 +43,19 @@ type GetLastTimeFActionParams struct {
 
 func (q *Queries) GetLastTimeFAction(ctx context.Context, arg GetLastTimeFActionParams) (*time.Time, error) {
 	row := q.db.QueryRow(ctx, getLastTimeFAction, arg.ChatTgID, arg.UserTgID)
-	var last_s_at *time.Time
-	err := row.Scan(&last_s_at)
-	return last_s_at, err
+	var last_f_at *time.Time
+	err := row.Scan(&last_f_at)
+	return last_f_at, err
 }
 
 const tryPerformFAction = `-- name: TryPerformFAction :one
 UPDATE chat_users
 SET
     f_action_count = f_action_count + 1,
-    last_s_at = now()
+    last_f_at = now()
 WHERE chat_tg_id = $1
   AND user_tg_id = $2
-  AND (last_s_at IS NULL OR last_s_at < NOW() - $3::interval)
+  AND (last_f_at IS NULL OR last_f_at < NOW() - $3::interval)
 RETURNING f_action_count
 `
 
