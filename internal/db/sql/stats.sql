@@ -11,7 +11,7 @@ SELECT
          SELECT 1 FROM chat_users cu
          WHERE cu.user_tg_id = u.tg_id
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_new_users,
+     )) AS today_active_users,
 
     (SELECT COUNT(*)
      FROM chats c
@@ -21,13 +21,13 @@ SELECT
          SELECT 1 FROM chat_users cu
          WHERE cu.chat_tg_id = c.tg_id
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_new_chats,
+     )) AS today_active_chats,
 
     (SELECT COUNT(DISTINCT cu.user_tg_id)
      FROM chat_users cu
      WHERE cu.is_user_removed
        AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-    ) AS today_burned_users,
+    ) AS today_lazy_users,
 
     (SELECT COUNT(*)
      FROM chats c
@@ -37,7 +37,15 @@ SELECT
          SELECT 1 FROM chat_users cu
          WHERE cu.chat_tg_id = c.tg_id
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_burned_chats;
+     )) AS today_lazy_chats,
+
+    (SELECT COUNT(*)
+     FROM chats c
+     WHERE c.created_at > NOW() - INTERVAL '24 HOURS') as today_new_chats,
+
+    (SELECT COUNT(*)
+     FROM users u
+     WHERE u.created_at > NOW() - INTERVAL '24 HOURS') as today_new_users;
 
 
 

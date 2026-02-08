@@ -15,7 +15,13 @@ func PrivateStats(ctx context.Context, upd telego.Update, services *service_wrap
 		return
 	}
 	text := fmt.Sprintf(
-		"Активных пользователей сегодня: %d\nАктивных чатов сегодня: %d\nНеактивных чатов сегодня: %d\nНеактивных людей сегодня: %d",
-		stats.TodayNewUsers, stats.TodayNewChats, stats.TodayBurnedChats, stats.TodayBurnedUsers)
+		`Активных пользователей сегодня: %d
+Активных чатов сегодня: %d
+Неактивных чатов сегодня: %d
+Неактивных людей сегодня: %d
+Новых чатов сегодня: %d
+Новых пользователей сегодня: %d`,
+		stats.TodayActiveUsers, stats.TodayActiveChats, stats.TodayLazyChats,
+		stats.TodayLazyUsers, stats.TodayNewChats, stats.TodayNewUsers)
 	workers.EnqueueMessage(ctx, text, upd.Message)
 }
