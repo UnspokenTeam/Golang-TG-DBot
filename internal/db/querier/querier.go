@@ -20,12 +20,12 @@ type Querier interface {
 	GetLastTimeFAction(ctx context.Context, arg GetLastTimeFActionParams) (*time.Time, error)
 	GetLastTimeMAction(ctx context.Context, arg GetLastTimeMActionParams) (*time.Time, error)
 	GetLastTimeSAction(ctx context.Context, arg GetLastTimeSActionParams) (*time.Time, error)
-	GetRandomActionForStrangerFromNewest(ctx context.Context) (GetRandomActionForStrangerFromNewestRow, error)
+	GetRandomActionFromNewest(ctx context.Context, isYourself bool) (GetRandomActionFromNewestRow, error)
 	GetUserByTgId(ctx context.Context, tgID int64) (User, error)
 	GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgIdParams) (GetUserStatsByTgIdRow, error)
-	GetYourselfRandomActionFromNewest(ctx context.Context) (GetYourselfRandomActionFromNewestRow, error)
 	GrowD(ctx context.Context, arg GrowDParams) (decimal.Decimal, error)
 	InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error
+	InsertNewAction(ctx context.Context, arg InsertNewActionParams) error
 	SetUserRoleByTgId(ctx context.Context, arg SetUserRoleByTgIdParams) error
 	TryPerformFAction(ctx context.Context, arg TryPerformFActionParams) (int32, error)
 	TryPerformMAction(ctx context.Context, arg TryPerformMActionParams) (int32, error)
