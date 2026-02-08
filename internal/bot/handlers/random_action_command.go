@@ -22,8 +22,9 @@ func Random(ctx context.Context, upd telego.Update, services *service_wrapper.Se
 		action   string
 		yourself = upd.Message.ReplyToMessage == nil
 	)
+
 	if yourself {
-		newest, actionErr := services.PostgresClient.Queries.GetYourselfRandomActionFromNewest(ctx)
+		newest, actionErr := services.PostgresClient.Queries.GetRandomActionFromNewest(ctx, true)
 		if actionErr != nil {
 			return
 		}
@@ -31,7 +32,7 @@ func Random(ctx context.Context, upd telego.Update, services *service_wrapper.Se
 		action = newest.Action
 		slog.DebugContext(ctx, "Action performed", "action_id", newest.ID)
 	} else {
-		newest, actionErr := services.PostgresClient.Queries.GetRandomActionForStrangerFromNewest(ctx)
+		newest, actionErr := services.PostgresClient.Queries.GetRandomActionFromNewest(ctx, false)
 		if actionErr != nil {
 			return
 		}
@@ -40,23 +41,24 @@ func Random(ctx context.Context, upd telego.Update, services *service_wrapper.Se
 		slog.DebugContext(ctx, "Action performed", "action_id", newest.ID)
 	}
 
-	err := services.PostgresClient.Queries.UpdateLastMessageAt(ctx, querier.UpdateLastMessageAtParams{
+	if err := services.PostgresClient.Queries.UpdateLastMessageAt(ctx, querier.UpdateLastMessageAtParams{
 		ChatTgID: upd.Message.Chat.ID,
 		UserTgID: upd.Message.From.ID,
-	})
-	if err != nil {
+	}); err != nil {
 		return
 	}
 
-	text := services.ConfigCache.GetString("perform_random_text_pattern")
-
 	actionTo := ""
 	if upd.Message.ReplyToMessage != nil {
-		actionTo = hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID)
+		if hndUtils.IsValidUser(upd.Message.ReplyToMessage) {
+			actionTo = hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID)
+		} else {
+			actionTo = hndUtils.GetStrangerName(upd.Message.ReplyToMessage)
+		}
 	}
 
 	workers.EnqueueMessage(ctx,
-		fmt.Sprintf(text,
+		fmt.Sprintf("%s %s %s",
 			hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID),
 			action,
 			actionTo,

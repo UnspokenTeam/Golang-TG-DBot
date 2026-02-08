@@ -11,7 +11,7 @@ import (
 )
 
 func Analyze(ctx context.Context, upd telego.Update, services *service_wrapper.Services) {
-	if upd.Message.ReplyToMessage == nil {
+	if upd.Message.ReplyToMessage == nil || upd.Message.ReplyToMessage.From == nil {
 		return
 	}
 	text := fmt.Sprintf(
