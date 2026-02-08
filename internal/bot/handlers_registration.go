@@ -18,8 +18,9 @@ import (
 	"go.opentelemetry.io/otel/metric"
 )
 
+var reqCounter metric.Int64Counter
+
 func registerHandler(
-	appCtx context.Context,
 	handler *th.BotHandler,
 	command []string,
 	handleFunc func(context.Context, telego.Update, *service_wrapper.Services),
@@ -66,7 +67,11 @@ func registerHandler(
 				)
 				defer handlerSpan.End()
 				handleFunc(ctx, update, services)
-				commandCounter.Add(ctx, 1, metric.WithAttributes(
+				go reqCounter.Add(ctx, 1, metric.WithAttributes(
+					attribute.Int64("user_id", update.Message.From.ID),
+					attribute.Int64("chat_id", update.Message.Chat.ID),
+				))
+				go commandCounter.Add(ctx, 1, metric.WithAttributes(
 					attribute.Int64("user_id", update.Message.From.ID),
 					attribute.Int64("chat_id", update.Message.Chat.ID),
 				))
@@ -76,12 +81,22 @@ func registerHandler(
 			th.CommandEqual(commandBind),
 		)
 	}
-	slog.InfoContext(appCtx, fmt.Sprintf("Registered %d commands for %s", len(command), funcName))
+	slog.InfoContext(rootCtx, fmt.Sprintf("Registered %d commands for %s", len(command), funcName))
 }
 
-func configureHandlers(ctx context.Context, handler *th.BotHandler) {
+func configureHandlers(handler *th.BotHandler) {
+	var err error
+	reqCounter, err = services.Meter.Int64Counter(
+		"bot.requests.total",
+		metric.WithDescription("Total number of bot commands processed"),
+		metric.WithUnit("1"),
+	)
+	if err != nil {
+		logger.Fatal(fmt.Sprintf("create metric err: %s", err))
+		return
+	}
+
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("start_commands"),
 		hnd.Start,
@@ -89,7 +104,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("restart_commands"),
 		hnd.Restart,
@@ -97,7 +111,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("help_commands"),
 		hnd.Help,
@@ -105,7 +118,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("user_stats_commands"),
 		hnd.PublicStats,
@@ -113,7 +125,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		[]string{"promote"},
 		hnd.Promote,
@@ -121,7 +132,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		[]string{"demote"},
 		hnd.Demote,
@@ -129,7 +139,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		[]string{"admin_stats"},
 		hnd.PrivateStats,
@@ -137,7 +146,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("my_stats_commands"),
 		hnd.UserStats,
@@ -145,7 +153,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("up_commands"),
 		hnd.Up,
@@ -153,7 +160,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		[]string{"analyze"},
 		hnd.Analyze,
@@ -161,7 +167,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("s_commands"),
 		hnd.SAction,
@@ -169,7 +174,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("random_action_commands"),
 		hnd.Random,
@@ -177,7 +181,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("m_commands"),
 		hnd.MAction,
@@ -185,7 +188,6 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		services.CommandsViper.GetStringSlice("f_commands"),
 		hnd.FAction,
@@ -193,10 +195,16 @@ func configureHandlers(ctx context.Context, handler *th.BotHandler) {
 	)
 
 	registerHandler(
-		ctx,
 		handler,
 		[]string{"echo"},
 		hnd.Echo,
 		[]roles.Role{roles.OWNER},
+	)
+
+	registerHandler(
+		handler,
+		services.CommandsViper.GetStringSlice("action_commands"),
+		hnd.Perform,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
 	)
 }

@@ -17,13 +17,15 @@ import (
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"github.com/uptrace/uptrace-go/uptrace"
 	"github.com/valyala/fasthttp"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	services *service_wrapper.Services
+	rootCtx  context.Context
 )
 
-func initBotInstance(ctx context.Context, token string) *telego.Bot {
+func initBotInstance(token string) *telego.Bot {
 	if bot, err := telego.NewBot(
 		token,
 		telego.WithAPICaller(
@@ -34,7 +36,7 @@ func initBotInstance(ctx context.Context, token string) *telego.Bot {
 				StartDelay:   time.Millisecond * 10,
 				MaxDelay:     time.Second,
 			}),
-		telego.WithHealthCheck(ctx),
+		telego.WithHealthCheck(rootCtx),
 		telego.WithLogger(services.TelegoLogger),
 	); err != nil {
 		logger.Fatal(fmt.Sprintf("Error while creating bot instance: %v", err))
@@ -55,20 +57,21 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	servicesInstance := service_wrapper.Services{}
 	services = servicesInstance.Init(appCtx)
 
-	ctx, rootSpan := services.Tracer.Start(appCtx, "Main app span")
+	var rootSpan trace.Span
+	rootCtx, rootSpan = services.Tracer.Start(appCtx, "Main app span")
 	defer rootSpan.End()
 
 	switch utils.GetEnv() {
 	case utils.DEVELOPMENT:
 		var channelErr error
-		bot = initBotInstance(ctx, services.AppViper.GetString("DEV_TOKEN"))
-		if updatesCh, channelErr = bot.UpdatesViaLongPolling(ctx, nil); channelErr != nil {
-			slog.ErrorContext(ctx, fmt.Sprintf("Channel error: %v", channelErr))
+		bot = initBotInstance(services.AppViper.GetString("DEV_TOKEN"))
+		if updatesCh, channelErr = bot.UpdatesViaLongPolling(rootCtx, nil); channelErr != nil {
+			slog.ErrorContext(rootCtx, fmt.Sprintf("Channel error: %v", channelErr))
 		}
 
 	case utils.PRODUCTION:
 		prodConfig := configs.LoadConfig(services.AppViper, configs.ProdBotConfig{})
-		bot = initBotInstance(ctx, prodConfig.ProdToken)
+		bot = initBotInstance(prodConfig.ProdToken)
 
 		webhookPath := "/" + bot.Token()
 		webhookURL := fmt.Sprintf("https://api.%s%s", prodConfig.CaddyDomain, webhookPath)
@@ -82,38 +85,38 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 			)
 		)
 
-		if info, getWebhookInfoErr = bot.GetWebhookInfo(ctx); getWebhookInfoErr != nil {
-			slog.ErrorContext(ctx, replacer.Replace(fmt.Sprintf("Get webhook info error: %v\nInfo:%+v", getWebhookInfoErr, info)))
+		if info, getWebhookInfoErr = bot.GetWebhookInfo(rootCtx); getWebhookInfoErr != nil {
+			slog.ErrorContext(rootCtx, replacer.Replace(fmt.Sprintf("Get webhook info error: %v\nInfo:%+v", getWebhookInfoErr, info)))
 		}
 
 		if info.URL != webhookURL {
-			if setWebhookErr := bot.SetWebhook(ctx, &telego.SetWebhookParams{
+			if setWebhookErr := bot.SetWebhook(rootCtx, &telego.SetWebhookParams{
 				URL:         webhookURL,
 				SecretToken: bot.SecretToken(),
 			}); setWebhookErr != nil {
-				slog.ErrorContext(ctx, fmt.Sprintf("Set webhook error: %v", setWebhookErr))
+				slog.ErrorContext(rootCtx, fmt.Sprintf("Set webhook error: %v", setWebhookErr))
 			}
 
-			if info, getWebhookInfoErr = bot.GetWebhookInfo(ctx); getWebhookInfoErr != nil {
-				slog.ErrorContext(ctx, replacer.Replace(fmt.Sprintf("Get final webhook error: %v\nInfo:%+v", getWebhookInfoErr, info)))
+			if info, getWebhookInfoErr = bot.GetWebhookInfo(rootCtx); getWebhookInfoErr != nil {
+				slog.ErrorContext(rootCtx, replacer.Replace(fmt.Sprintf("Get final webhook error: %v\nInfo:%+v", getWebhookInfoErr, info)))
 			}
 		}
-		slog.InfoContext(ctx, replacer.Replace(fmt.Sprintf("Webhook Info: %+v\n", info)))
+		slog.InfoContext(rootCtx, replacer.Replace(fmt.Sprintf("Webhook Info: %+v\n", info)))
 
 		var channelErr error
 		if updatesCh, channelErr = bot.UpdatesViaWebhook(
-			ctx,
+			rootCtx,
 			telego.WebhookFastHTTP(srv, webhookPath, bot.SecretToken()),
 			telego.WithWebhookBuffer(prodConfig.BufferSize),
 		); channelErr != nil {
-			slog.ErrorContext(ctx, fmt.Sprintf("Channel error: %v", channelErr))
+			slog.ErrorContext(rootCtx, fmt.Sprintf("Channel error: %v", channelErr))
 		}
 
 	default:
 		logger.Fatal(fmt.Sprintf("Unknown env GO_ENV=%s", utils.GetEnv()))
-		services.PostgresClient.Close(ctx)
-		if err := uptrace.Shutdown(ctx); err != nil {
-			slog.ErrorContext(ctx, fmt.Sprintf("Error in uptrace shutdown: %v", err))
+		services.PostgresClient.Close(rootCtx)
+		if err := uptrace.Shutdown(rootCtx); err != nil {
+			slog.ErrorContext(rootCtx, fmt.Sprintf("Error in uptrace shutdown: %v", err))
 		}
 		return
 	}
@@ -124,6 +127,6 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	}
 	filterWrapper := middlewares.UserFilterWrapper(services)
 	handler.Use(filterWrapper)
-	configureHandlers(ctx, handler)
-	runComponentsWithGracefulShutdown(ctx, cancelFunc, bot, handler, srv, services.PostgresClient)
+	configureHandlers(handler)
+	runComponentsWithGracefulShutdown(cancelFunc, bot, handler, srv, services.PostgresClient)
 }

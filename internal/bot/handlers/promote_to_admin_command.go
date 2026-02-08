@@ -13,15 +13,14 @@ import (
 )
 
 func Promote(ctx context.Context, upd telego.Update, services *service_wrapper.Services) {
-	if upd.Message.ReplyToMessage == nil || upd.Message.ReplyToMessage.From.ID == upd.Message.From.ID {
+	if upd.Message.ReplyToMessage == nil || upd.Message.ReplyToMessage.From.ID == upd.Message.From.ID || !hndUtils.IsValidUser(upd.Message.ReplyToMessage) {
 		return
 	}
 
-	err := services.PostgresClient.Queries.SetUserRoleByTgId(ctx, querier.SetUserRoleByTgIdParams{
+	if err := services.PostgresClient.Queries.SetUserRoleByTgId(ctx, querier.SetUserRoleByTgIdParams{
 		UserRole: string(roles.ADMIN),
 		TgID:     upd.Message.ReplyToMessage.From.ID,
-	})
-	if err != nil {
+	}); err != nil {
 		return
 	}
 

@@ -9,12 +9,12 @@ import (
 	"context"
 )
 
-const getRandomActionForStrangerFromNewest = `-- name: GetRandomActionForStrangerFromNewest :one
+const getRandomActionFromNewest = `-- name: GetRandomActionFromNewest :one
 SELECT id, action
 FROM (
     SELECT id, action
     FROM actions
-    WHERE is_yourself = false
+    WHERE is_yourself = $1
     ORDER BY created_at DESC
     LIMIT 1000
 ) AS newest
@@ -22,41 +22,38 @@ ORDER BY RANDOM()
 LIMIT 1
 `
 
-type GetRandomActionForStrangerFromNewestRow struct {
+type GetRandomActionFromNewestRow struct {
 	ID     int64
 	Action string
 }
 
-func (q *Queries) GetRandomActionForStrangerFromNewest(ctx context.Context) (GetRandomActionForStrangerFromNewestRow, error) {
-	row := q.db.QueryRow(ctx, getRandomActionForStrangerFromNewest)
-	var i GetRandomActionForStrangerFromNewestRow
+func (q *Queries) GetRandomActionFromNewest(ctx context.Context, isYourself bool) (GetRandomActionFromNewestRow, error) {
+	row := q.db.QueryRow(ctx, getRandomActionFromNewest, isYourself)
+	var i GetRandomActionFromNewestRow
 	err := row.Scan(&i.ID, &i.Action)
 	return i, err
 }
 
-const getYourselfRandomActionFromNewest = `-- name: GetYourselfRandomActionFromNewest :one
-SELECT id, action
-FROM (
-         SELECT id, action
-         FROM actions
-         WHERE is_yourself
-         ORDER BY created_at DESC
-         LIMIT 1000
-     ) AS newest
-ORDER BY RANDOM()
-LIMIT 1
+const insertNewAction = `-- name: InsertNewAction :exec
+INSERT INTO actions (is_yourself, chat_tg_id, user_tg_id, action)
+VALUES ($1, $2, $3, $4)
 `
 
-type GetYourselfRandomActionFromNewestRow struct {
-	ID     int64
-	Action string
+type InsertNewActionParams struct {
+	IsYourself bool
+	ChatTgID   int64
+	UserTgID   int64
+	Action     string
 }
 
-func (q *Queries) GetYourselfRandomActionFromNewest(ctx context.Context) (GetYourselfRandomActionFromNewestRow, error) {
-	row := q.db.QueryRow(ctx, getYourselfRandomActionFromNewest)
-	var i GetYourselfRandomActionFromNewestRow
-	err := row.Scan(&i.ID, &i.Action)
-	return i, err
+func (q *Queries) InsertNewAction(ctx context.Context, arg InsertNewActionParams) error {
+	_, err := q.db.Exec(ctx, insertNewAction,
+		arg.IsYourself,
+		arg.ChatTgID,
+		arg.UserTgID,
+		arg.Action,
+	)
+	return err
 }
 
 const updateLastMessageAt = `-- name: UpdateLastMessageAt :exec

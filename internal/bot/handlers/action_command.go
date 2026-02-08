@@ -3,8 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
-	"log/slog"
-	"math/rand"
+	"strings"
 
 	"github.com/mymmrac/telego"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
@@ -13,32 +12,28 @@ import (
 	hndUtils "github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 )
 
-func randomChoice(choices []string) string {
-	return choices[rand.Intn(len(choices))]
-}
-
-func Random(ctx context.Context, upd telego.Update, services *service_wrapper.Services) {
+func Perform(ctx context.Context, upd telego.Update, services *service_wrapper.Services) {
 	var (
 		action   string
 		yourself = upd.Message.ReplyToMessage == nil
 	)
 
-	if yourself {
-		newest, actionErr := services.PostgresClient.Queries.GetRandomActionFromNewest(ctx, true)
-		if actionErr != nil {
-			return
-		}
-
-		action = newest.Action
-		slog.DebugContext(ctx, "Action performed", "action_id", newest.ID)
+	if idx := strings.Index(upd.Message.Text, " "); idx != -1 {
+		action = upd.Message.Text[idx+1:]
 	} else {
-		newest, actionErr := services.PostgresClient.Queries.GetRandomActionFromNewest(ctx, false)
-		if actionErr != nil {
-			return
-		}
+		workers.EnqueueMessage(ctx,
+			fmt.Sprintf("%s, напиши вместе с командой через пробел действие, которое хочешь совершить!",
+				hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID)),
+			upd.Message)
+	}
 
-		action = newest.Action
-		slog.DebugContext(ctx, "Action performed", "action_id", newest.ID)
+	if err := services.PostgresClient.Queries.InsertNewAction(ctx, querier.InsertNewActionParams{
+		IsYourself: yourself,
+		ChatTgID:   upd.Message.Chat.ID,
+		UserTgID:   upd.Message.From.ID,
+		Action:     action,
+	}); err != nil {
+		return
 	}
 
 	if err := services.PostgresClient.Queries.UpdateLastMessageAt(ctx, querier.UpdateLastMessageAtParams{

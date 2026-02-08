@@ -47,9 +47,9 @@ func MAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 	text := services.ConfigCache.GetString("m_action_text_pattern")
 	phrase := randomChoice(services.ConfigCache.GetStringSlice("m_action_phrases"))
 	if upd.Message.ReplyToMessage != nil && upd.Message.From.ID == upd.Message.ReplyToMessage.From.ID {
-		newest, actionErr := services.PostgresClient.Queries.GetYourselfRandomActionFromNewest(ctx)
+		newest, actionErr := services.PostgresClient.Queries.GetRandomActionFromNewest(ctx, true)
 		if actionErr != nil {
-			newest = querier.GetYourselfRandomActionFromNewestRow{
+			newest = querier.GetRandomActionFromNewestRow{
 				ID:     -1,
 				Action: ", потому что очень себя любит",
 			}
@@ -62,8 +62,11 @@ func MAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 
 	actionTo := ""
 	if upd.Message.ReplyToMessage != nil {
-		actionTo = fmt.Sprintf(" на %s",
-			hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID))
+		stranger := hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID)
+		if !hndUtils.IsValidUser(upd.Message.ReplyToMessage) {
+			stranger = hndUtils.GetStrangerName(upd.Message.ReplyToMessage)
+		}
+		actionTo = fmt.Sprintf(" на %s", stranger)
 	}
 
 	workers.EnqueueMessage(ctx,

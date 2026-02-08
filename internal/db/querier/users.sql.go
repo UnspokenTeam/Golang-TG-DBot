@@ -36,6 +36,7 @@ func (q *Queries) GetUserByTgId(ctx context.Context, tgID int64) (User, error) {
 const getUserStatsByTgId = `-- name: GetUserStatsByTgId :one
 SELECT
     u.user_name,
+    u.user_role,
     c.name,
     cu.d_length,
     cu.m_action_count,
@@ -55,6 +56,7 @@ type GetUserStatsByTgIdParams struct {
 
 type GetUserStatsByTgIdRow struct {
 	UserName     string
+	UserRole     string
 	Name         string
 	DLength      decimal.Decimal
 	MActionCount int32
@@ -68,6 +70,7 @@ func (q *Queries) GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgId
 	var i GetUserStatsByTgIdRow
 	err := row.Scan(
 		&i.UserName,
+		&i.UserRole,
 		&i.Name,
 		&i.DLength,
 		&i.MActionCount,

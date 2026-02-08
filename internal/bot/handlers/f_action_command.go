@@ -22,16 +22,10 @@ func FAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 		return
 	}
 
-	if !hndUtils.IsValidUser(upd.Message.ReplyToMessage) {
-		if upd.Message.ReplyToMessage == nil {
-			workers.EnqueueMessage(ctx, fmt.Sprintf(services.ConfigCache.GetString("f_action_tutorial"),
-				hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID)), upd.Message)
-		} else {
-			workers.EnqueueMessage(ctx, fmt.Sprintf("%s, невозможно взаимодействовать с %s",
-				hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID),
-				upd.Message.ReplyToMessage.From.FirstName),
-				upd.Message)
-		}
+	var isStrangerValid = hndUtils.IsValidUser(upd.Message.ReplyToMessage)
+	if !isStrangerValid && upd.Message.ReplyToMessage == nil {
+		workers.EnqueueMessage(ctx, fmt.Sprintf(services.ConfigCache.GetString("f_action_tutorial"),
+			hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID)), upd.Message)
 		return
 	}
 
@@ -60,12 +54,17 @@ func FAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 		return
 	}
 
-	err = tx.ConfirmFAction(txCtx, querier.ConfirmFActionParams{
-		ChatTgID: upd.Message.Chat.ID,
-		UserTgID: upd.Message.ReplyToMessage.From.ID,
-	})
-	if err != nil {
-		return
+	var actionTo = ""
+	if isStrangerValid {
+		if err = tx.ConfirmFAction(txCtx, querier.ConfirmFActionParams{
+			ChatTgID: upd.Message.Chat.ID,
+			UserTgID: upd.Message.ReplyToMessage.From.ID,
+		}); err != nil {
+			return
+		}
+		actionTo = hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID)
+	} else {
+		actionTo = hndUtils.GetStrangerName(upd.Message.ReplyToMessage)
 	}
 
 	services.PostgresClient.CommitTx(txCtx, tx)
@@ -73,9 +72,9 @@ func FAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 	text := services.ConfigCache.GetString("f_action_text_pattern")
 	phrase := randomChoice(services.ConfigCache.GetStringSlice("f_action_phrases"))
 	if upd.Message.From.ID == upd.Message.ReplyToMessage.From.ID {
-		newest, actionErr := services.PostgresClient.Queries.GetYourselfRandomActionFromNewest(ctx)
+		newest, actionErr := services.PostgresClient.Queries.GetRandomActionFromNewest(ctx, true)
 		if actionErr != nil {
-			newest = querier.GetYourselfRandomActionFromNewestRow{
+			newest = querier.GetRandomActionFromNewestRow{
 				ID:     -1,
 				Action: ", потому что очень себя любит",
 			}
@@ -89,7 +88,7 @@ func FAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 	workers.EnqueueMessage(ctx,
 		fmt.Sprintf(text,
 			hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID),
-			hndUtils.MentionUser(upd.Message.ReplyToMessage.From.FirstName, upd.Message.ReplyToMessage.From.ID),
+			actionTo,
 			phrase,
 			count,
 			hndUtils.GetChatLink("Заходи в наш чат!", services.ConfigCache.GetString("bot_public_chat_url")),
