@@ -17,7 +17,7 @@ SELECT
          SELECT 1 FROM chat_users cu
          WHERE cu.user_tg_id = u.tg_id
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_new_users,
+     )) AS today_active_users,
 
     (SELECT COUNT(*)
      FROM chats c
@@ -27,13 +27,13 @@ SELECT
          SELECT 1 FROM chat_users cu
          WHERE cu.chat_tg_id = c.tg_id
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_new_chats,
+     )) AS today_active_chats,
 
     (SELECT COUNT(DISTINCT cu.user_tg_id)
      FROM chat_users cu
      WHERE cu.is_user_removed
        AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-    ) AS today_burned_users,
+    ) AS today_lazy_users,
 
     (SELECT COUNT(*)
      FROM chats c
@@ -43,24 +43,36 @@ SELECT
          SELECT 1 FROM chat_users cu
          WHERE cu.chat_tg_id = c.tg_id
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_burned_chats
+     )) AS today_lazy_chats,
+
+    (SELECT COUNT(*)
+     FROM chats c
+     WHERE c.created_at > NOW() - INTERVAL '24 HOURS') as today_new_chats,
+
+    (SELECT COUNT(*)
+     FROM users u
+     WHERE u.created_at > NOW() - INTERVAL '24 HOURS') as today_new_users
 `
 
 type GetAllAdminTimeStatsRow struct {
-	TodayNewUsers    int64
+	TodayActiveUsers int64
+	TodayActiveChats int64
+	TodayLazyUsers   int64
+	TodayLazyChats   int64
 	TodayNewChats    int64
-	TodayBurnedUsers int64
-	TodayBurnedChats int64
+	TodayNewUsers    int64
 }
 
 func (q *Queries) GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error) {
 	row := q.db.QueryRow(ctx, getAllAdminTimeStats)
 	var i GetAllAdminTimeStatsRow
 	err := row.Scan(
-		&i.TodayNewUsers,
+		&i.TodayActiveUsers,
+		&i.TodayActiveChats,
+		&i.TodayLazyUsers,
+		&i.TodayLazyChats,
 		&i.TodayNewChats,
-		&i.TodayBurnedUsers,
-		&i.TodayBurnedChats,
+		&i.TodayNewUsers,
 	)
 	return i, err
 }
