@@ -23,5 +23,7 @@ func UserStats(ctx context.Context, upd telego.Update, services *service_wrapper
 		return
 	}
 	text := services.ConfigCache.GetString("my_stats_text_pattern")
-	workers.EnqueueMessage(ctx, fmt.Sprintf(text, hndUtils.MentionUser(stats.UserName, upd.Message.From.ID), stats.Name, stats.DLength, stats.MActionCount, stats.FActionCount, stats.SActionCount, stats.Loses), upd.Message)
+	workers.EnqueueMessage(ctx, fmt.Sprintf(text, hndUtils.MentionUser(stats.UserName, upd.Message.From.ID),
+		stats.UserRole, stats.Name, stats.DLength, stats.MActionCount, stats.FActionCount, stats.SActionCount,
+		stats.Loses), upd.Message)
 }

@@ -14,6 +14,7 @@ WHERE u.tg_id = $2;
 -- name: GetUserStatsByTgId :one
 SELECT
     u.user_name,
+    u.user_role,
     c.name,
     cu.d_length,
     cu.m_action_count,
