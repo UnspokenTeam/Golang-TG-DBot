@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/mymmrac/telego"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
@@ -22,8 +23,14 @@ func UserStats(ctx context.Context, upd telego.Update, services *service_wrapper
 	if err != nil {
 		return
 	}
+
+	percent := 100 - ((float64(stats.Loses) / float64(stats.GamesPlayed)) * 100)
+	percentRounded := math.Ceil(percent)
+	winrate := fmt.Sprintf("%.2f%%\n", percentRounded)
+
 	text := services.ConfigCache.GetString("my_stats_text_pattern")
 	workers.EnqueueMessage(ctx, fmt.Sprintf(text, hndUtils.MentionUser(stats.UserName, upd.Message.From.ID),
-		stats.UserRole, stats.Name, stats.DLength, stats.MActionCount, stats.FActionCount, stats.SActionCount,
-		stats.Loses), upd.Message)
+		stats.UserRole, stats.Name, stats.DLength, stats.MActionCount, stats.FActionCount,
+		stats.FActionFromStrangerCount, stats.SActionFromStrangerCount, stats.SActionCount, stats.Loses, winrate),
+		upd.Message)
 }

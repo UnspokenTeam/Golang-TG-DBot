@@ -19,7 +19,10 @@ SELECT
     cu.d_length,
     cu.m_action_count,
     cu.f_action_count,
+    cu.f_action_from_stranger_count,
     cu.s_action_count,
+    cu.s_action_from_stranger_count,
+    cu.games_played,
     cu.loses
 FROM chat_users cu
 JOIN chats c on cu.chat_tg_id = c.tg_id

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/mymmrac/telego"
-	"github.com/mymmrac/telego/telegoapi"
+	ta "github.com/mymmrac/telego/telegoapi"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	hndUtils "github.com/unspokenteam/golang-tg-dbot/pkg/utils"
@@ -97,7 +97,7 @@ func EnqueueMessage(updCtx context.Context, text string, message *telego.Message
 func tryToSendWithRetry(msg channels.Message) bool {
 	var (
 		err    error
-		apiErr *telegoapi.Error
+		apiErr *ta.Error
 	)
 
 	sendParams := msg.Msg.WithLinkPreviewOptions(&telego.LinkPreviewOptions{IsDisabled: true}).

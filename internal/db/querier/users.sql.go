@@ -41,7 +41,10 @@ SELECT
     cu.d_length,
     cu.m_action_count,
     cu.f_action_count,
+    cu.f_action_from_stranger_count,
     cu.s_action_count,
+    cu.s_action_from_stranger_count,
+    cu.games_played,
     cu.loses
 FROM chat_users cu
 JOIN chats c on cu.chat_tg_id = c.tg_id
@@ -55,14 +58,17 @@ type GetUserStatsByTgIdParams struct {
 }
 
 type GetUserStatsByTgIdRow struct {
-	UserName     string
-	UserRole     string
-	Name         string
-	DLength      decimal.Decimal
-	MActionCount int32
-	FActionCount int32
-	SActionCount int32
-	Loses        int32
+	UserName                 string
+	UserRole                 string
+	Name                     string
+	DLength                  decimal.Decimal
+	MActionCount             int32
+	FActionCount             int32
+	FActionFromStrangerCount int32
+	SActionCount             int32
+	SActionFromStrangerCount int32
+	GamesPlayed              int32
+	Loses                    int32
 }
 
 func (q *Queries) GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgIdParams) (GetUserStatsByTgIdRow, error) {
@@ -75,7 +81,10 @@ func (q *Queries) GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgId
 		&i.DLength,
 		&i.MActionCount,
 		&i.FActionCount,
+		&i.FActionFromStrangerCount,
 		&i.SActionCount,
+		&i.SActionFromStrangerCount,
+		&i.GamesPlayed,
 		&i.Loses,
 	)
 	return i, err

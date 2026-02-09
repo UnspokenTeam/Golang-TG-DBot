@@ -31,7 +31,7 @@ func FAction(ctx context.Context, upd telego.Update, services *service_wrapper.S
 
 	cooldown := time.Duration(services.ConfigCache.GetInt("f_action_command_cooldown")) * time.Minute
 
-	txCtx, tx := services.PostgresClient.NewTx(ctx, &pgx.TxOptions{})
+	txCtx, tx := services.PostgresClient.NewTx(ctx, &pgx.TxOptions{IsoLevel: pgx.RepeatableRead})
 	defer services.PostgresClient.RollbackTx(txCtx, tx)
 
 	count, err := tx.TryPerformFAction(txCtx, querier.TryPerformFActionParams{

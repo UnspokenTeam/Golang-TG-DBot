@@ -17,8 +17,8 @@ func PrivateStats(ctx context.Context, upd telego.Update, services *service_wrap
 	text := fmt.Sprintf(
 		`Активных пользователей сегодня: %d
 Активных чатов сегодня: %d
-Неактивных чатов сегодня: %d
-Неактивных людей сегодня: %d
+Чатов ушло сегодня: %d
+Людей ушло сегодня: %d
 Новых чатов сегодня: %d
 Новых пользователей сегодня: %d`,
 		stats.TodayActiveUsers, stats.TodayActiveChats, stats.TodayLazyChats,
