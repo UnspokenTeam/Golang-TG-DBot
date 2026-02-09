@@ -17,6 +17,8 @@ type Querier interface {
 	GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error)
 	GetAllTimeStats(ctx context.Context) (GetAllTimeStatsRow, error)
 	GetChatLeaderBoards(ctx context.Context, chatTgID int64) ([]GetChatLeaderBoardsRow, error)
+	GetChatMemberCount(ctx context.Context, chatTgID int64) (int64, error)
+	GetGameLastTime(ctx context.Context, tgID int64) (*time.Time, error)
 	GetGlobalLeaderBoards(ctx context.Context) ([]GetGlobalLeaderBoardsRow, error)
 	GetLastTimeDAction(ctx context.Context, arg GetLastTimeDActionParams) (*time.Time, error)
 	GetLastTimeFAction(ctx context.Context, arg GetLastTimeFActionParams) (*time.Time, error)
@@ -25,10 +27,15 @@ type Querier interface {
 	GetRandomActionFromNewest(ctx context.Context, isYourself bool) (GetRandomActionFromNewestRow, error)
 	GetUserByTgId(ctx context.Context, tgID int64) (User, error)
 	GetUserStatsByTgId(ctx context.Context, arg GetUserStatsByTgIdParams) (GetUserStatsByTgIdRow, error)
+	GetUsersForGameCursorBased(ctx context.Context, arg GetUsersForGameCursorBasedParams) ([]GetUsersForGameCursorBasedRow, error)
 	GrowD(ctx context.Context, arg GrowDParams) (decimal.Decimal, error)
 	InitChatUserData(ctx context.Context, arg InitChatUserDataParams) error
 	InsertNewAction(ctx context.Context, arg InsertNewActionParams) error
+	RecordGame(ctx context.Context, arg RecordGameParams) error
+	RecordGameLose(ctx context.Context, arg RecordGameLoseParams) error
+	RemoveLostUsers(ctx context.Context, arg RemoveLostUsersParams) error
 	SetUserRoleByTgId(ctx context.Context, arg SetUserRoleByTgIdParams) error
+	StartGame(ctx context.Context, arg StartGameParams) (*time.Time, error)
 	TryPerformFAction(ctx context.Context, arg TryPerformFActionParams) (int32, error)
 	TryPerformMAction(ctx context.Context, arg TryPerformMActionParams) (int32, error)
 	TryPerformSAction(ctx context.Context, arg TryPerformSActionParams) (int32, error)

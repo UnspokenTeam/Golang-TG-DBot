@@ -221,4 +221,11 @@ func configureHandlers(handler *th.BotHandler) {
 		hnd.ChatLeaderboard,
 		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
 	)
+
+	registerHandler(
+		handler,
+		services.CommandsViper.GetStringSlice("play_commands"),
+		hnd.Play,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
 }
