@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/mymmrac/telego"
+	ta "github.com/mymmrac/telego/telegoapi"
 	th "github.com/mymmrac/telego/telegohandler"
 	tu "github.com/mymmrac/telego/telegoutil"
 	"golang.org/x/time/rate"
@@ -332,4 +334,17 @@ func GetStrangerName(msg *telego.Message) string {
 		return msg.From.FirstName
 	}
 	return ""
+}
+
+func IsUserInChat(ctx context.Context, chatId, userId int64, limiter *rate.Limiter) bool {
+	rateLimitWait(ctx, limiter)
+	member, err := utilsBotInstance.GetChatMember(ctx, &telego.GetChatMemberParams{
+		ChatID: tu.ID(chatId),
+		UserID: userId,
+	})
+	var apiErr *ta.Error
+	if err != nil && errors.As(err, &apiErr) && strings.Contains(apiErr.Description, "CHAT_ADMIN_REQUIRED") {
+		return true
+	}
+	return err == nil && member != nil && member.MemberStatus() != "left" && member.MemberStatus() != "kicked"
 }
