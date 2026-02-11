@@ -5,6 +5,7 @@ include:
   - 'caddy/docker-compose.caddy.yml'
   - 'clickhouse/docker-compose.clickhouse.yml'
   - 'observability/docker-compose.cadvisor.yml'
+  - 'observability/docker-compose.prometheus.yml'
   - 'observability/docker-compose.uptrace.yml'
   - 'postgres/docker-compose.postgres.yml'
   - 'postgres/docker-compose.pgadmin.yml'
