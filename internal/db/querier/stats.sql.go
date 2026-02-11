@@ -29,22 +29,6 @@ SELECT
            AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
      )) AS today_active_chats,
 
-    (SELECT COUNT(DISTINCT cu.user_tg_id)
-     FROM chat_users cu
-     WHERE cu.is_user_removed
-       AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-    ) AS today_lazy_users,
-
-    (SELECT COUNT(*)
-     FROM chats c
-     WHERE c.is_active = false
-       AND (c.type = 'supergroup' OR c.type = 'group')
-       AND EXISTS (
-         SELECT 1 FROM chat_users cu
-         WHERE cu.chat_tg_id = c.tg_id
-           AND cu.last_message_at > NOW() - INTERVAL '24 HOURS'
-     )) AS today_lazy_chats,
-
     (SELECT COUNT(*)
      FROM chats c
      WHERE c.created_at > NOW() - INTERVAL '24 HOURS') as today_new_chats,
@@ -57,8 +41,6 @@ SELECT
 type GetAllAdminTimeStatsRow struct {
 	TodayActiveUsers int64
 	TodayActiveChats int64
-	TodayLazyUsers   int64
-	TodayLazyChats   int64
 	TodayNewChats    int64
 	TodayNewUsers    int64
 }
@@ -69,8 +51,6 @@ func (q *Queries) GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStat
 	err := row.Scan(
 		&i.TodayActiveUsers,
 		&i.TodayActiveChats,
-		&i.TodayLazyUsers,
-		&i.TodayLazyChats,
 		&i.TodayNewChats,
 		&i.TodayNewUsers,
 	)
