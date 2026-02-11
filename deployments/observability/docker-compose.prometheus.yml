@@ -1,0 +1,55 @@
+services:
+  prom-agent-init:
+    image: alpine:3.21
+    container_name: tg-dbot-prom-agent-init
+    user: "0:0"
+    restart: "no"
+    profiles: [ "prod" ]
+    environment:
+      UPTRACE_DSN: http://${UPTRACE_PROJECT_SECRET}@uptrace:14318?grpc=14317
+    volumes:
+      - ./../../configs/observability/prometheus.tmpl.yml:/in/prometheus.tmpl.yml:ro
+      - prom_cfg:/out
+      - prom_agent_data:/prom-agent
+    command:
+      - sh
+      - -euxc
+      - |
+          apk add --no-cache gettext
+          mkdir -p /out
+          # $$ — чтобы docker-compose не съел $, а envsubst увидел $UPTRACE_DSN
+          envsubst '$$UPTRACE_DSN' < /in/prometheus.tmpl.yml > /out/prometheus.yml
+          # Prometheus image обычно не root, поэтому готовим права на WAL-директорию
+          chown -R 65534:65534 /prom-agent
+
+  prom-agent:
+    image: prom/prometheus:v3.9.1
+    container_name: tg-dbot-prom-agent
+    profiles: [ "prod" ]
+    restart: unless-stopped
+    depends_on:
+      prom-agent-init:
+        condition: service_completed_successfully
+    ports:
+      - "9095:9095"
+    volumes:
+      - prom_cfg:/etc/prometheus:ro
+      - prom_agent_data:/prom-agent
+    healthcheck:
+      test: [ "CMD-SHELL", "wget -qO- http://localhost:9095/-/healthy >/dev/null 2>&1 || exit 1" ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    command:
+      - "--agent"
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.agent.path=/prom-agent"
+      - "--web.listen-address=:9095"
+      - "--web.enable-lifecycle"
+    networks:
+      - tg-dbot-network
+
+volumes:
+  prom_agent_data:
+  prom_cfg:

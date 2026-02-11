@@ -17,9 +17,9 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/metrics" ]
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/" ]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
     networks:

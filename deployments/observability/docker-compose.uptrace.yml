@@ -45,6 +45,8 @@ services:
         condition: service_healthy
       cadvisor:
         condition: service_healthy
+      prom-agent:
+        condition: service_healthy
 
     networks:
       - tg-dbot-network
