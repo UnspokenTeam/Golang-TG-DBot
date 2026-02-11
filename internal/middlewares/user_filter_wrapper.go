@@ -76,7 +76,7 @@ func isUserDeniedByRateLimit(ctx *th.Context, message *telego.Message) bool {
 			go muteCounter.Add(ctx, 1, metric.WithAttributes(
 				attribute.Int64("user_id", message.From.ID),
 				attribute.Int64("chat_id", message.Chat.ID),
-				attribute.String("msg", fmt.Sprintf("%+v", message)),
+				attribute.String("msg", utils.MarshalJsonIgnoreError(ctx, message)),
 			))
 
 			go utils.TryMuteSpammer(ctx, message, cfg.SpamCooldown, services.TgApiRateLimiter)

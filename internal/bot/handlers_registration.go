@@ -14,6 +14,7 @@ import (
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/roles"
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/service_wrapper"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
+	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
@@ -63,7 +64,7 @@ func registerHandler(
 					attribute.String("command", funcDisplayName),
 					attribute.Int64("user_id", update.Message.From.ID),
 					attribute.Int64("chat_id", update.Message.Chat.ID),
-					attribute.String("msg", fmt.Sprintf("%+v", update.Message)),
+					attribute.String("msg", utils.MarshalJsonIgnoreError(ctx, update.Message)),
 				)
 				defer handlerSpan.End()
 				handleFunc(ctx, update, services)
@@ -227,5 +228,12 @@ func configureHandlers(handler *th.BotHandler) {
 		services.CommandsViper.GetStringSlice("play_commands"),
 		hnd.Play,
 		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
+
+	registerHandler(
+		handler,
+		[]string{"send"},
+		hnd.Broadcast,
+		[]roles.Role{roles.OWNER},
 	)
 }
