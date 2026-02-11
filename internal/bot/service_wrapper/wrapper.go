@@ -88,8 +88,9 @@ func (services *Services) Init(ctx context.Context) *Services {
 		services.PostgresClient = client
 	}
 
+	rps := services.AppViper.GetInt("RPS_LIMIT")
 	services.TgApiRateLimiter = rate.NewLimiter(
-		rate.Every(time.Second/time.Duration(services.AppViper.GetInt("RPS_LIMIT"))), 1)
+		rate.Every(time.Second/time.Duration(rps)), rps)
 
 	slog.Info("Services configured")
 	return services

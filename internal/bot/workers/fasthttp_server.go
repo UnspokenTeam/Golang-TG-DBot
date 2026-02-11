@@ -9,7 +9,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-func gracefulShutdownServer(srv *fasthttp.Server) {
+func gracefulShutdownServer(ctx context.Context, srv *fasthttp.Server) {
 	slog.InfoContext(ctx, "Shutting down server...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -22,7 +22,7 @@ func gracefulShutdownServer(srv *fasthttp.Server) {
 }
 
 func StartServer(ctx context.Context, srv *fasthttp.Server, port int) {
-	defer gracefulShutdownServer(srv)
+	defer gracefulShutdownServer(ctx, srv)
 
 	go func() {
 		slog.InfoContext(ctx, "Starting server...")

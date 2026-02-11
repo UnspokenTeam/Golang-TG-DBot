@@ -86,7 +86,9 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 		)
 
 		if info, getWebhookInfoErr = bot.GetWebhookInfo(rootCtx); getWebhookInfoErr != nil {
-			slog.ErrorContext(rootCtx, replacer.Replace(fmt.Sprintf("Get webhook info error: %v\nInfo:%+v", getWebhookInfoErr, info)))
+
+			slog.ErrorContext(rootCtx, replacer.Replace(fmt.Sprintf("Get webhook info error: %v\nInfo:%s",
+				getWebhookInfoErr, utils.MarshalJsonIgnoreError(rootCtx, info))))
 		}
 
 		if info.URL != webhookURL {
@@ -98,10 +100,13 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 			}
 
 			if info, getWebhookInfoErr = bot.GetWebhookInfo(rootCtx); getWebhookInfoErr != nil {
-				slog.ErrorContext(rootCtx, replacer.Replace(fmt.Sprintf("Get final webhook error: %v\nInfo:%+v", getWebhookInfoErr, info)))
+				slog.ErrorContext(rootCtx, replacer.Replace(fmt.Sprintf("Get final webhook error: %v\nInfo:%s",
+					getWebhookInfoErr, utils.MarshalJsonIgnoreError(rootCtx, info))))
 			}
 		}
-		slog.InfoContext(rootCtx, replacer.Replace(fmt.Sprintf("Webhook Info: %+v\n", info)))
+
+		slog.InfoContext(rootCtx, replacer.Replace(fmt.Sprintf("Webhook Info: %s\n",
+			utils.MarshalJsonIgnoreError(rootCtx, info))))
 
 		var channelErr error
 		if updatesCh, channelErr = bot.UpdatesViaWebhook(
@@ -128,5 +133,5 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 	filterWrapper := middlewares.UserFilterWrapper(services)
 	handler.Use(filterWrapper)
 	configureHandlers(handler)
-	runComponentsWithGracefulShutdown(cancelFunc, bot, handler, srv, services.PostgresClient)
+	runComponentsWithGracefulShutdown(cancelFunc, services, bot, handler, srv)
 }

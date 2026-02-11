@@ -9,7 +9,7 @@ import (
 	"github.com/mymmrac/telego/telegohandler"
 )
 
-func gracefulShutdownConsumer(handler *telegohandler.BotHandler) {
+func gracefulShutdownConsumer(ctx context.Context, handler *telegohandler.BotHandler) {
 	slog.InfoContext(ctx, "Shutting down bot...")
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -22,7 +22,7 @@ func gracefulShutdownConsumer(handler *telegohandler.BotHandler) {
 }
 
 func RunCommandConsumer(ctx context.Context, handler *telegohandler.BotHandler) {
-	defer gracefulShutdownConsumer(handler)
+	defer gracefulShutdownConsumer(ctx, handler)
 
 	go func() {
 		slog.InfoContext(ctx, "Starting bot...")

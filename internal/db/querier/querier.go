@@ -16,8 +16,10 @@ type Querier interface {
 	ConfirmSAction(ctx context.Context, arg ConfirmSActionParams) error
 	GetAllAdminTimeStats(ctx context.Context) (GetAllAdminTimeStatsRow, error)
 	GetAllTimeStats(ctx context.Context) (GetAllTimeStatsRow, error)
+	GetChatCountForBroadcast(ctx context.Context) (int64, error)
 	GetChatLeaderBoards(ctx context.Context, chatTgID int64) ([]GetChatLeaderBoardsRow, error)
 	GetChatMemberCount(ctx context.Context, chatTgID int64) (int64, error)
+	GetChatsForBroadcastCursorBased(ctx context.Context, arg GetChatsForBroadcastCursorBasedParams) ([]GetChatsForBroadcastCursorBasedRow, error)
 	GetGameLastTime(ctx context.Context, tgID int64) (*time.Time, error)
 	GetGlobalLeaderBoards(ctx context.Context) ([]GetGlobalLeaderBoardsRow, error)
 	GetLastTimeDAction(ctx context.Context, arg GetLastTimeDActionParams) (*time.Time, error)
@@ -39,7 +41,9 @@ type Querier interface {
 	TryPerformFAction(ctx context.Context, arg TryPerformFActionParams) (int32, error)
 	TryPerformMAction(ctx context.Context, arg TryPerformMActionParams) (int32, error)
 	TryPerformSAction(ctx context.Context, arg TryPerformSActionParams) (int32, error)
+	UpdateChatStatusToDead(ctx context.Context, deadIds []int64) error
 	UpdateLastMessageAt(ctx context.Context, arg UpdateLastMessageAtParams) error
+	UpdateLastSysTimestamp(ctx context.Context, aliveChats []int64) error
 }
 
 var _ Querier = (*Queries)(nil)
