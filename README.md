@@ -104,3 +104,15 @@ chmod +x run-backup.sh
 ( crontab -l 2>/dev/null; echo '0 23 * * * /PATH-TO-SHELL-SCRIPT/run-backup.sh >> /var/www/golang-tg-dbot/backup-cron.log 2>&1' ) | crontab -
 ```
 </blockquote>
+
+Рестор c бэкапа:
+```shell
+docker exec -i $POSTGRES_INTERNAL_HOST pg_restore \
+  -U postgres \
+  --verbose \
+  --clean \
+  --no-acl \
+  --no-owner \
+  -d bot_db \         
+  < dump.dump 
+```
