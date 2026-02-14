@@ -1,3 +1,4 @@
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/UnspokenTeam/Golang-TG-DBot)
 # GoLang TG D-Bot — Production Compose
 
 Проект поднимается через Docker Compose с использованием `.env` файла и профилей (`prod`).
@@ -37,7 +38,7 @@
 .
 ├── cmd
 │   ├── bot              # входная точка бота
-│   └── pg_dump_worker   # воркер для бэкапов (заготовка)
+│   └── pg_dump_worker   # воркер для бэкапов
 ├── internal
 │   ├── bot              # приложение бота, обработчики, воркеры, graceful shutdown
 │   ├── configs          # загрузка и кеширование конфигурации
