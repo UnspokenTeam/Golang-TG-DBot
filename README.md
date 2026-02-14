@@ -89,6 +89,7 @@ docker compose -f docker-compose.prod.yml --env-file ./../.env --profile prod up
 
 <blockquote>
 Джобу требуется забилдить и получить независимый go-бинарник:
+
 ```shell
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -a -installsuffix cgo -o go_pg_dump ./cmd/pg_dump_worker/main.go
 chmod +x go_pg_dump
