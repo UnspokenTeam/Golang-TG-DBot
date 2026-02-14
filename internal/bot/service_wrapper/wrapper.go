@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
@@ -78,7 +77,7 @@ func (services *Services) Init(ctx context.Context) *Services {
 	})
 
 	postgresCfg := configs.LoadConfig(services.AppViper, configs.PostgresConfig{})
-	if utils.IsEnvDevelopment() && os.Getenv("IS_DOCKER") == "TRUE" {
+	if utils.IsEnvDevelopment() && viper.GetBool("IS_DOCKER") {
 		postgresCfg.Host = services.AppViper.GetString("POSTGRES_INTERNAL_HOST")
 	}
 

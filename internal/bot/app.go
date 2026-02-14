@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"log/slog"
 	"strings"
 	"time"
@@ -54,6 +55,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 		srv       = &fasthttp.Server{}
 	)
 
+	viper.AutomaticEnv()
 	servicesInstance := service_wrapper.Services{}
 	services = servicesInstance.Init(appCtx)
 
