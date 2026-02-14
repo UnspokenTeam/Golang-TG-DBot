@@ -1,8 +1,9 @@
 package configs
 
 import (
-	"golang.org/x/crypto/ssh"
 	"time"
+
+	"golang.org/x/crypto/ssh"
 )
 
 type SftpConfig struct {
@@ -13,7 +14,7 @@ type SftpConfig struct {
 	Path     string `mapstructure:"SFTP_PATH"`
 }
 
-func (cfg *SftpConfig) GetSshSftpConfig() *ssh.ClientConfig {
+func (cfg *SftpConfig) GetSshConfig() *ssh.ClientConfig {
 	return &ssh.ClientConfig{
 		User: cfg.User,
 		Auth: []ssh.AuthMethod{
