@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"log/slog"
 	"os"
 	"runtime/debug"
@@ -41,7 +42,7 @@ func SetupLogger(serviceName string) *TelegoLogger {
 	if utils.IsEnvProduction() {
 		uptrace.ConfigureOpentelemetry(
 			uptrace.WithDeploymentEnvironment(utils.GetEnv()),
-			uptrace.WithDSN(os.Getenv("UPTRACE_DSN")),
+			uptrace.WithDSN(viper.GetString("UPTRACE_DSN")),
 			uptrace.WithServiceName(serviceName),
 			uptrace.WithServiceVersion("1.0.0"),
 		)

@@ -10,7 +10,7 @@ services:
     env_file:
       - example.env
     environment:
-      IS_DOCKER: TRUE
+      IS_DOCKER: "true"
     volumes:
       - ./example.env:/example.env:ro
       - ./configs/bot/commands.yaml:/configs/bot/commands.yaml:ro
