@@ -17,9 +17,7 @@ services:
       - |
           apk add --no-cache gettext
           mkdir -p /out
-          # $$ — чтобы docker-compose не съел $, а envsubst увидел $UPTRACE_DSN
           envsubst '$$UPTRACE_DSN' < /in/prometheus.tmpl.yml > /out/prometheus.yml
-          # Prometheus image обычно не root, поэтому готовим права на WAL-директорию
           chown -R 65534:65534 /prom-agent
 
   prom-agent:
