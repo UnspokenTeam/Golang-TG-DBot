@@ -1,16 +1,29 @@
 services:
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
     container_name: tg-dbot-cadvisor
     restart: unless-stopped
     profiles: ["prod"]
+    cgroup: host
     ports:
       - "8086:8080"
+    devices:
+      - /dev/kmsg
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /run/containerd/containerd.sock:/run/containerd/containerd.sock:ro
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+
+    command:
+      - "--docker=unix:///var/run/docker.sock"
+      - "--containerd=/run/containerd/containerd.sock"
+      - "--docker_only=true"
+      - "--store_container_labels=true"
+      - "--whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service"
     healthcheck:
       test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz" ]
       interval: 30s
