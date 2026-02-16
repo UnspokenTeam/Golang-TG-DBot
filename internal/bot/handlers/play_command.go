@@ -77,8 +77,6 @@ func Play(ctx context.Context, upd telego.Update, services *service_wrapper.Serv
 			tiebreaker = user.UserTgID
 			//if hndUtils.IsUserInChat(ctx, upd.Message.Chat.ID, user.UserTgID, services.TgApiRateLimiter) {
 			//	inGameUsers = append(inGameUsers, user)
-			//	cursor = user.LastMessageAt
-			//	tiebreaker = user.UserTgID
 			//} else {
 			//	lostUsers = append(lostUsers, user.UserTgID)
 			//}
