@@ -14,6 +14,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/uptrace/uptrace-go v1.39.0
 	github.com/valyala/fasthttp v1.69.0
+	github.com/yuin/goldmark v1.7.16
 	go.opentelemetry.io/contrib/bridges/otelslog v0.14.0
 	go.opentelemetry.io/otel v1.39.0
 	go.opentelemetry.io/otel/metric v1.39.0

@@ -31,6 +31,7 @@ func Talk(ctx context.Context, upd telego.Update, services *service_wrapper.Serv
 			fmt.Sprintf("%s, не торопись! Разговаривать с ботом можно раз в минуту.",
 				hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID)),
 			upd.Message)
+		return
 	}
 	if err != nil {
 		slog.ErrorContext(ctx, fmt.Sprintf("llm err: %v", err))
@@ -38,6 +39,7 @@ func Talk(ctx context.Context, upd telego.Update, services *service_wrapper.Serv
 			fmt.Sprintf("%s, спроси меня об этом позже.",
 				hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID)),
 			upd.Message)
+		return
 	}
 
 	workers.EnqueueMessage(ctx,

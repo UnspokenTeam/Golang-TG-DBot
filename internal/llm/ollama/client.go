@@ -8,12 +8,16 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/text"
 	"golang.org/x/time/rate"
 )
 
@@ -24,6 +28,38 @@ type Client struct {
 	rateLimitCache *redis.Client
 	llmRateLimiter *rate.Limiter
 	configCache    *configs.ConfigCache
+}
+
+var reNL = regexp.MustCompile(`\n{3,}`)
+
+func markdownToText(md string) string {
+	src := []byte(md)
+	parser := goldmark.New()
+
+	doc := parser.Parser().Parse(text.NewReader(src))
+
+	var buf bytes.Buffer
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		switch n.(type) {
+		case *ast.Paragraph, *ast.Heading, *ast.ListItem, *ast.Blockquote:
+			if !entering {
+				buf.WriteByte('\n')
+			}
+		}
+		if entering {
+			if t, ok := n.(*ast.Text); ok {
+				buf.Write(t.Segment.Value(src))
+				if t.SoftLineBreak() || t.HardLineBreak() {
+					buf.WriteByte('\n')
+				}
+			}
+		}
+		return ast.WalkContinue, nil
+	})
+
+	out := strings.ReplaceAll(buf.String(), "\r\n", "\n")
+	out = strings.TrimSpace(reNL.ReplaceAllString(out, "\n\n"))
+	return out
 }
 
 func NewClient(baseURL, model string, timeout time.Duration, rateLimitCache *redis.Client,
@@ -127,5 +163,6 @@ func (c *Client) Generate(ctx context.Context, userId int64, prompt string) (*Ge
 		return &out, fmt.Errorf("empty prompt (done_reason=%s)", out.DoneReason)
 	}
 
+	out.Response = markdownToText(out.Response)
 	return &out, nil
 }
