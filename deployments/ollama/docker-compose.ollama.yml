@@ -1,0 +1,51 @@
+services:
+  ollama:
+    container_name: tg-dbot-llm
+    image: ollama/ollama:0.16.2
+    volumes:
+      - ollama-data:/root/.ollama
+    command: ["serve"]
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "wget -qO- http://127.0.0.1:11434/api/generate \
+          --post-data='{ \"model\":\"qwen3:1.7b-q8_0\", \"prompt\":\"ping\", \"stream\":false, \"keep_alive\":0, \"options\":{ \"num_predict\":2 } }' \
+          --header='Content-Type: application/json' \
+          | grep -Eq '\"done\"[[:space:]]*:[[:space:]]*true'"
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    cpus: "2.0"
+    mem_limit: 4096m
+    memswap_limit: 4096m
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4096m
+    networks:
+      - tg-dbot-network
+
+  llm-init:
+    image: alpine/curl:8.17.0
+    depends_on:
+      ollama:
+        condition: service_started
+    restart: "no"
+    networks:
+      - tg-dbot-network
+    command: >
+      sh -c '
+        curl -sS -X POST http://ollama:11434/api/pull \
+          -H "Content-Type: application/json" \
+          -d "{\"name\":\"qwen3:1.7b-q8_0\",\"stream\":false}";
+      '
+
+volumes:
+  ollama-data:

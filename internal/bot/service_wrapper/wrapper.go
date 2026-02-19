@@ -12,6 +12,7 @@ import (
 	"github.com/unspokenteam/golang-tg-dbot/internal/bot/channels"
 	"github.com/unspokenteam/golang-tg-dbot/internal/configs"
 	"github.com/unspokenteam/golang-tg-dbot/internal/db/querier"
+	"github.com/unspokenteam/golang-tg-dbot/internal/llm/ollama"
 	"github.com/unspokenteam/golang-tg-dbot/internal/logger"
 	"github.com/unspokenteam/golang-tg-dbot/pkg/utils"
 	"go.opentelemetry.io/otel"
@@ -30,6 +31,8 @@ type Services struct {
 	ConfigCache      *configs.ConfigCache
 	Tracer           trace.Tracer
 	Meter            metric.Meter
+	LlmRateLimiter   *rate.Limiter
+	LlmClient        *ollama.Client
 }
 
 func (services *Services) Init(ctx context.Context) *Services {
@@ -90,6 +93,13 @@ func (services *Services) Init(ctx context.Context) *Services {
 	rps := services.AppViper.GetInt("RPS_LIMIT")
 	services.TgApiRateLimiter = rate.NewLimiter(
 		rate.Every(time.Second/time.Duration(rps)), rps)
+
+	services.LlmRateLimiter = rate.NewLimiter(
+		rate.Every(time.Second/time.Duration(1)), 1)
+
+	llmConfig := configs.LoadConfig(services.AppViper, configs.LlmConfig{})
+	services.LlmClient = ollama.NewClient(llmConfig.GetBaseUrl(), llmConfig.Model, time.Minute,
+		services.RateLimitCache, services.ConfigCache, services.LlmRateLimiter)
 
 	slog.Info("Services configured")
 	return services
