@@ -236,4 +236,11 @@ func configureHandlers(handler *th.BotHandler) {
 		hnd.Broadcast,
 		[]roles.Role{roles.OWNER},
 	)
+
+	registerHandler(
+		handler,
+		[]string{"talk"},
+		hnd.Talk,
+		[]roles.Role{roles.OWNER, roles.ADMIN, roles.USER},
+	)
 }

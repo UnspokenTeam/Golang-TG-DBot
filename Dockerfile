@@ -14,9 +14,12 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
     -o bot \
     ./cmd/bot/main.go
 
+FROM busybox:musl AS bb
+
 FROM scratch
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /build/bot /bot
+COPY --from=bb /bin/busybox /bin/busybox
 
 EXPOSE 8080
 ENTRYPOINT ["/bot"]

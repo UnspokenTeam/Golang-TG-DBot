@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -26,6 +27,16 @@ func StartServer(ctx context.Context, srv *fasthttp.Server, port int) {
 
 	go func() {
 		slog.InfoContext(ctx, "Starting server...")
+		next := srv.Handler
+		srv.Handler = func(ctx *fasthttp.RequestCtx) {
+			if bytes.Equal(ctx.Path(), []byte("/healthz")) {
+				ctx.SetStatusCode(fasthttp.StatusOK)
+				ctx.SetContentType("text/plain; charset=utf-8")
+				ctx.SetBodyString("ok")
+				return
+			}
+			next(ctx)
+		}
 		if err := srv.ListenAndServe(fmt.Sprintf(":%d", port)); err != nil {
 			slog.ErrorContext(ctx, fmt.Sprintf("Server error: %v", err))
 		}
