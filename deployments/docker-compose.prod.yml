@@ -12,6 +12,7 @@ include:
   - 'postgres/docker-compose.migrator.yml'
   - 'redis/docker-compose.rate-limiter.yml'
   - 'redis/docker-compose.uptrace-cache.yml'
+  - 'ollama/docker-compose.ollama.yml'
 
 services:
   bot-prod:
@@ -29,8 +30,18 @@ services:
     environment:
       UPTRACE_DSN: http://${UPTRACE_PROJECT_SECRET}@uptrace:14318?grpc=14317
     depends_on:
-      - uptrace
-      - rate-limiter-redis
+      uptrace:
+        condition: service_healthy
+      rate-limiter-redis:
+        condition: service_healthy
+      llm-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: [ "CMD", "/bin/busybox", "wget", "-qO-", "http://127.0.0.1:8080/healthz" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
     networks:
       - tg-dbot-network
     profiles: ["prod"]
