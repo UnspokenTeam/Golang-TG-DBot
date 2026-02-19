@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -110,9 +111,18 @@ func (c *Client) Generate(ctx context.Context, userId int64, prompt string) (*Ge
 		return nil, nil
 	}
 
-	if limiterErr := c.llmRateLimiter.Wait(ctx); limiterErr != nil {
+	ctxWait, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	if limiterErr := c.llmRateLimiter.Wait(ctxWait); limiterErr != nil {
+		if errors.Is(limiterErr, context.DeadlineExceeded) || errors.Is(limiterErr, context.Canceled) {
+			return &GenerateResponse{}, limiterErr
+		}
+
 		slog.ErrorContext(ctx, fmt.Sprintf("LLM rate limiter error: %s", limiterErr))
 	}
+
+	slog.InfoContext(ctx, "Reasoning...")
 
 	reqBody := generateRequest{
 		Model:  c.model,

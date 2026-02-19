@@ -21,6 +21,7 @@ func Talk(ctx context.Context, upd telego.Update, services *service_wrapper.Serv
 			fmt.Sprintf("%s, напиши вместе с командой через пробел то, о чём хочешь поговорить!",
 				hndUtils.MentionUser(upd.Message.From.FirstName, upd.Message.From.ID)),
 			upd.Message)
+		return
 	}
 
 	ctx, llmSpan := services.Tracer.Start(ctx, "llm")
