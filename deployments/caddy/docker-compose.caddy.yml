@@ -17,11 +17,11 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:2019/metrics", "||", "exit", "1" ]
-      interval: 1m30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: [ "CMD-SHELL", "wget -qO- http://127.0.0.1:2019/config/ >/dev/null 2>&1" ]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
     networks:
       - tg-dbot-network
 
