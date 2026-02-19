@@ -69,6 +69,7 @@ func registerHandler(
 				defer handlerSpan.End()
 				handleFunc(ctx, update, services)
 				go reqCounter.Add(ctx, 1, metric.WithAttributes(
+					attribute.String("command", funcDisplayName),
 					attribute.Int64("user_id", update.Message.From.ID),
 					attribute.Int64("chat_id", update.Message.Chat.ID),
 				))
