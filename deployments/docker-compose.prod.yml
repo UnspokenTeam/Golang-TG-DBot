@@ -34,8 +34,8 @@ services:
         condition: service_healthy
       rate-limiter-redis:
         condition: service_healthy
-      llm-init:
-        condition: service_completed_successfully
+#      llm-init:
+#        condition: service_completed_successfully
     healthcheck:
       test: [ "CMD", "/bin/busybox", "wget", "-qO-", "http://127.0.0.1:8080/healthz" ]
       interval: 10s
