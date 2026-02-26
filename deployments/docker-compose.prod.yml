@@ -12,7 +12,7 @@ include:
   - 'postgres/docker-compose.migrator.yml'
   - 'redis/docker-compose.rate-limiter.yml'
   - 'redis/docker-compose.uptrace-cache.yml'
-  - 'ollama/docker-compose.ollama.yml'
+#  - 'ollama/docker-compose.ollama.yml'
 
 services:
   bot-prod:

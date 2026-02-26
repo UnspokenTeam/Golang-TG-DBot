@@ -103,7 +103,7 @@ func (w *BatchWorker) sendNewBatch(base channels.BroadcastBase) {
 				// Continue
 			}
 
-			if limiterErr := w.internalRateLimiter.Wait(w.ctx); err != nil {
+			if limiterErr := w.internalRateLimiter.Wait(w.ctx); limiterErr != nil {
 				slog.ErrorContext(batchCtx, fmt.Sprintf("rate limiter interrupted: %s", limiterErr),
 					"batch_id", base.BatchId)
 				continue
@@ -118,7 +118,7 @@ func (w *BatchWorker) sendNewBatch(base channels.BroadcastBase) {
 			})
 		}
 
-		for i := 0; i < min(int(batchIterationSize), int(totalChats)); i++ {
+		for range chats {
 			result := <-batchChan
 
 			if result.Success {
