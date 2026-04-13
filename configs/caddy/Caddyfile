@@ -1,27 +1,57 @@
+# Config for caddy with network mode: host
 api.{$DOMAIN} {
-    reverse_proxy tg-dbot-telego-prod:8080 {
+    reverse_proxy 127.0.0.1:8080 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
 }
 
 click.{$DOMAIN} {
-    reverse_proxy clickhouse:8123 {
+    reverse_proxy 127.0.0.1:8123 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
 }
 
 uptrace.{$DOMAIN} {
-    reverse_proxy uptrace:14318 {
+    reverse_proxy 127.0.0.1:14318 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
 }
 
 db.{$DOMAIN} {
-    reverse_proxy pgadmin:6432 {
+    reverse_proxy 127.0.0.1:6432 {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
     }
 }
+
+## Real server config
+#api.{$DOMAIN} {
+#    reverse_proxy tg-dbot-telego-prod:8080 {
+#        header_up Host {host}
+#        header_up X-Real-IP {remote_host}
+#    }
+#}
+#
+#click.{$DOMAIN} {
+#    reverse_proxy clickhouse:8123 {
+#        header_up Host {host}
+#        header_up X-Real-IP {remote_host}
+#    }
+#}
+#
+#uptrace.{$DOMAIN} {
+#    reverse_proxy uptrace:14318 {
+#        header_up Host {host}
+#        header_up X-Real-IP {remote_host}
+#    }
+#}
+#
+#db.{$DOMAIN} {
+#    reverse_proxy pgadmin:6432 {
+#        header_up Host {host}
+#        header_up X-Real-IP {remote_host}
+#    }
+#}

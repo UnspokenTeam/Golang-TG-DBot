@@ -3,7 +3,7 @@ services:
     image: caddy:2.11-alpine
     container_name: tg-dbot-caddy
     restart: unless-stopped
-    profiles: ["prod"]
+    profiles: ["caddy"]
     environment:
       DOMAIN: ${CADDY_DOMAIN}
     cap_add:
