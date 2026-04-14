@@ -3,11 +3,10 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/spf13/viper"
 	"log/slog"
 	"strings"
 	"time"
-
-	"github.com/spf13/viper"
 
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
@@ -99,7 +98,7 @@ func Run(appCtx context.Context, cancelFunc context.CancelFunc) {
 				URL:         webhookURL,
 				SecretToken: bot.SecretToken(),
 			}); setWebhookErr != nil {
-				slog.ErrorContext(rootCtx, fmt.Sprintf("Set webhook error: %v\nInfo:%s\n%s\n%s", setWebhookErr, utils.MarshalJsonIgnoreError(rootCtx, setWebhookErr), bot.SecretToken(), webhookURL))
+				slog.ErrorContext(rootCtx, fmt.Sprintf("Set webhook error: %v", setWebhookErr))
 			}
 
 			if info, getWebhookInfoErr = bot.GetWebhookInfo(rootCtx); getWebhookInfoErr != nil {
