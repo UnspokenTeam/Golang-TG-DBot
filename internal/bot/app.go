@@ -3,10 +3,11 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/spf13/viper"
 	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"github.com/mymmrac/telego"
 	ta "github.com/mymmrac/telego/telegoapi"
