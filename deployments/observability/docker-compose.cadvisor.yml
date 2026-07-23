@@ -6,7 +6,7 @@ services:
     profiles: ["prod"]
     cgroup: host
     ports:
-      - "8086:8080"
+      - "127.0.0.1:8086:8080"
     devices:
       - /dev/kmsg
     volumes:

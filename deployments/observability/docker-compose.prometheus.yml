@@ -29,7 +29,7 @@ services:
       prom-agent-init:
         condition: service_completed_successfully
     ports:
-      - "9095:9095"
+      - "127.0.0.1:9095:9095"
     volumes:
       - prom_cfg:/etc/prometheus:ro
       - prom_agent_data:/prom-agent

@@ -9,7 +9,7 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_LISTEN_PORT: ${PGADMIN_LISTEN_PORT}
     ports:
-      - "6432:6432"
+      - "127.0.0.1:6432:6432"
     volumes:
       - pgadmin-data:/var/lib/pgadmin
       - ./../../configs/postgres/servers.json:/pgadmin4/servers.json

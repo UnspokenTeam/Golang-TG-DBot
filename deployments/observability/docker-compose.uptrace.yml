@@ -8,8 +8,8 @@ services:
       - ./../../configs/observability/uptrace.yml:/etc/uptrace/config.yml
       - uptrace_data:/var/lib/uptrace
     ports:
-      - "14317:14317"   # OTLP gRPC
-      - "14318:14318"   # OTLP HTTP
+      - "127.0.0.1:14317:14317"   # OTLP gRPC
+      - "127.0.0.1:14318:14318"   # OTLP HTTP
     environment:
       - DEBUG=2
       - CLICKHOUSE_HOST=${CLICKHOUSE_HOST}

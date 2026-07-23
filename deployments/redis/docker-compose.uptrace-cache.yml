@@ -4,7 +4,7 @@ services:
     container_name: tg-dbot-uptrace-cache-redis
     restart: unless-stopped
     ports:
-      - "7379:6379"
+      - "127.0.0.1:7379:6379"
     command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
     volumes:
       - uptrace-cache_data:/data
